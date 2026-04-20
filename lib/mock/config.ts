@@ -224,3 +224,45 @@ export const LEAD_TREE: ResourceNode[] = [
     ],
   },
 ];
+
+// ── Shared group-color palette (used by ResourceManager + FormulaInput) ───────
+export const GROUP_COLORS = ["#135b96", "#19674f", "#d65800", "#7d3c98", "#c8a53a", "#0986ec", "#c0392b"];
+
+function buildGroupsFlat(nodes: ResourceNode[]): { keys: string[] }[] {
+  const groups: { keys: string[] }[] = [];
+  function collectLeafKeys(node: ResourceNode, keys: string[]) {
+    if (node.type !== "dictionary" && node.type !== "array") keys.push(node.key);
+    node.children?.forEach((c) => collectLeafKeys(c, keys));
+  }
+  for (const top of nodes) {
+    const hasDictChild = top.children?.some((c) => c.type === "dictionary" || c.type === "array");
+    if (hasDictChild) {
+      const plainKeys: string[] = [];
+      for (const child of top.children ?? []) {
+        if (child.type === "dictionary" || child.type === "array") {
+          const keys: string[] = [];
+          child.children?.forEach((l) => collectLeafKeys(l, keys));
+          if (keys.length) groups.push({ keys });
+        } else {
+          plainKeys.push(child.key);
+        }
+      }
+      if (plainKeys.length) groups.push({ keys: plainKeys });
+    } else {
+      const keys: string[] = [];
+      top.children?.forEach((l) => collectLeafKeys(l, keys));
+      if (keys.length) groups.push({ keys });
+    }
+  }
+  return groups;
+}
+
+/** Maps every leaf field key → its group color (same as ResourceManager dots) */
+export const VAR_COLOR_MAP: Record<string, string> = (() => {
+  const map: Record<string, string> = {};
+  buildGroupsFlat(LEAD_TREE).forEach((g, gi) => {
+    const color = GROUP_COLORS[gi % GROUP_COLORS.length];
+    g.keys.forEach((k) => { map[k] = color; });
+  });
+  return map;
+})();

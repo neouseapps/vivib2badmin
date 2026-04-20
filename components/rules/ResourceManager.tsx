@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import type { ResourceNode } from "@/lib/scoring/types";
-import { LEAD_TREE } from "@/lib/mock/config";
+import { LEAD_TREE, GROUP_COLORS } from "@/lib/mock/config";
 import { useScoring } from "@/lib/store/scoring-store";
 import { VarCreateModal } from "./VarCreateModal";
 import { ImportVarModal } from "./ImportVarModal";
@@ -10,10 +10,6 @@ import {
   Copy, Trash2, Plus, Upload, CheckCircle2, Database, ChevronDown, FilePlus,
 } from "lucide-react";
 
-const TYPE_COLORS: Record<string, string> = {
-  number: "#135b96", string: "#19674f", boolean: "#d65800",
-  enum: "#7d3c98", array: "#c8a53a", dictionary: "#454545",
-};
 
 // ── Build flat grouped list from tree ────────────────────────────────────────
 function buildGroups(nodes: ResourceNode[]): { group: string; items: { key: string; label: string; type: string }[] }[] {
@@ -48,7 +44,7 @@ function buildGroups(nodes: ResourceNode[]): { group: string; items: { key: stri
 const FIELD_GROUPS = buildGroups(LEAD_TREE);
 
 // ── Single variable row ───────────────────────────────────────────────────────
-function VarRow({ keyPath, label, type }: { keyPath: string; label: string; type: string }) {
+function VarRow({ keyPath, label, color }: { keyPath: string; label: string; color: string }) {
   const [copied, setCopied] = useState(false);
   function copy() {
     navigator.clipboard.writeText(`@${keyPath}`).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1200); });
@@ -58,7 +54,7 @@ function VarRow({ keyPath, label, type }: { keyPath: string; label: string; type
       onClick={copy}
       className="group w-full flex items-center gap-2 px-2 py-1 rounded hover:bg-bg-lv3 transition-colors text-left"
     >
-      <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-px" style={{ background: TYPE_COLORS[type] ?? "#9e9e9e" }} />
+      <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-px" style={{ background: color }} />
       <span className="text-cap-md font-mono text-ink-2 truncate flex-1">{label}</span>
       {copied
         ? <CheckCircle2 size={11} className="text-success shrink-0" />
@@ -121,14 +117,17 @@ export function ResourceManager() {
 
         <div className="ml-1 space-y-3">
           {/* Static groups from LEAD_TREE */}
-          {FIELD_GROUPS.map((g) => (
-            <div key={g.group}>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-ink-4 px-2 pb-0.5">{g.group}</div>
-              {g.items.map((item) => (
-                <VarRow key={item.key} keyPath={item.key} label={item.label} type={item.type} />
-              ))}
-            </div>
-          ))}
+          {FIELD_GROUPS.map((g, gi) => {
+            const groupColor = GROUP_COLORS[gi % GROUP_COLORS.length];
+            return (
+              <div key={g.group}>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-ink-4 px-2 pb-0.5">{g.group}</div>
+                {g.items.map((item) => (
+                  <VarRow key={item.key} keyPath={item.key} label={item.label} color={groupColor} />
+                ))}
+              </div>
+            );
+          })}
 
           {/* Custom Variables group */}
           <div>

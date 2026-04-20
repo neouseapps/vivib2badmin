@@ -1,7 +1,7 @@
 "use client";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { SurveyCriterion, SurveyConfig, SurveyOption } from "@/lib/scoring/types";
-import { Trash2, Plus, EyeOff, GripVertical, Power } from "lucide-react";
+import { Trash2, Plus, EyeOff, GripVertical, Power, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 interface Props {
@@ -22,6 +22,15 @@ export function PingTestBuilder({
   onReorder,
 }: Props) {
   const dragFrom = useRef<number | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  function toggleCollapse(id: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   function updateOpt(critId: string, optId: string, patch: Partial<SurveyOption>) {
     const crit = survey.criteria.find((c) => c.id === critId);
@@ -68,7 +77,7 @@ export function PingTestBuilder({
           )}
         >
           {/* Header row */}
-          <div className="flex items-center gap-2 mb-3">
+          <div className={cn("flex items-center gap-2", !collapsed.has(c.id) && "mb-3")}>
             {/* Drag handle */}
             <GripVertical size={16} className="text-ink-4 cursor-grab shrink-0" />
 
@@ -116,8 +125,18 @@ export function PingTestBuilder({
             >
               <Trash2 size={14} />
             </button>
+
+            {/* Collapse toggle */}
+            <button
+              onClick={() => toggleCollapse(c.id)}
+              className="p-1.5 rounded-lg text-ink-3 hover:bg-bg-lv3 shrink-0"
+              title={collapsed.has(c.id) ? "Mở rộng" : "Thu gọn"}
+            >
+              {collapsed.has(c.id) ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+            </button>
           </div>
 
+          {!collapsed.has(c.id) && (<>
           {/* Help text */}
           <label className="label mb-1 block">Hướng dẫn cho Sales Rep</label>
           <input
@@ -178,6 +197,7 @@ export function PingTestBuilder({
           >
             <Plus size={12} />Thêm tuỳ chọn
           </button>
+          </>)}
         </div>
       ))}
     </div>

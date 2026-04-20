@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
-import { PhoneCall, Lock, RefreshCw, CheckCircle, X } from "lucide-react";
+import { PhoneCall, Lock, RefreshCw, CheckCircle, X, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/cn";
-import type { AxisBAnswers, SurveyConfig } from "@/lib/scoring/types";
+import type { AxisBAnswers, CallGuideSet, SurveyConfig } from "@/lib/scoring/types";
 
 interface Props {
   survey: SurveyConfig;
@@ -10,6 +10,7 @@ interface Props {
   axisB: number;
   locked: boolean;
   allLocked: boolean;
+  callGuideSet?: CallGuideSet | null;
   onUnlock: () => void;
   onSubmit: (answers: AxisBAnswers) => void;
 }
@@ -18,7 +19,7 @@ function isDirty(draft: Record<string, number | undefined>, saved: AxisBAnswers 
   return ids.some((id) => draft[id] !== (saved ? (saved[id] ?? undefined) : undefined));
 }
 
-export function AxisBWorkspace({ survey, current, axisB, locked, allLocked, onUnlock, onSubmit }: Props) {
+export function AxisBWorkspace({ survey, current, axisB, locked, allLocked, callGuideSet, onUnlock, onSubmit }: Props) {
   const activeCriteria = survey.criteria.filter((c) => c.active);
   const ids = activeCriteria.map((c) => c.id);
 
@@ -116,10 +117,38 @@ export function AxisBWorkspace({ survey, current, axisB, locked, allLocked, onUn
             <div className="overflow-y-auto divide-y divide-line flex-1">
               {activeCriteria.map((criterion) => {
                 const selected = draft[criterion.id];
+                const questions = callGuideSet?.questions.filter(
+                  (q) => q.axisBCriterionId === criterion.id
+                ) ?? [];
                 return (
-                  <div key={criterion.id} className="px-5 py-4">
-                    <div className="text-body font-medium text-ink-1 mb-0.5">{criterion.name}</div>
-                    <div className="text-cap-md text-ink-3 mb-3 leading-snug">{criterion.help}</div>
+                  <div key={criterion.id} className="px-5 py-4 space-y-3">
+                    {/* Title */}
+                    <div>
+                      <div className="text-body font-medium text-ink-1 mb-0.5">{criterion.name}</div>
+                      <div className="text-cap-md text-ink-3 leading-snug">{criterion.help}</div>
+                    </div>
+
+                    {/* Call guide questions */}
+                    {questions.length > 0 && (
+                      <div className="rounded-lg bg-bg-lv2 border border-line p-3 space-y-2">
+                        <div className="flex items-center gap-1.5 text-cap text-ink-3 font-medium">
+                          <MessageSquare size={11} />
+                          Câu hỏi gợi ý
+                        </div>
+                        <ul className="space-y-2">
+                          {questions.map((q) => (
+                            <li key={q.id} className="space-y-0.5">
+                              <div className="text-cap-md text-ink-1">{q.text}</div>
+                              {q.hint && (
+                                <div className="text-cap text-ink-3">{q.hint}</div>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Evaluation options */}
                     <div className="flex gap-2 flex-wrap">
                       {criterion.options.map((opt) => {
                         const isSel = selected === opt.achievement;

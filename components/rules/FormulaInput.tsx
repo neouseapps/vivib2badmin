@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState, useEffect } from "react";
 import { useScoring } from "@/lib/store/scoring-store";
-import { LEAD_TREE } from "@/lib/mock/config";
+import { LEAD_TREE, VAR_COLOR_MAP } from "@/lib/mock/config";
 import type { ResourceNode } from "@/lib/scoring/types";
 
 const FUNCTIONS = [
@@ -60,8 +60,12 @@ function buildHtml(text: string): string {
   let result = ""; let last = 0; let m;
   while ((m = varPat.exec(text)) !== null) {
     if (m.index > last) result += highlightPlain(text.slice(last, m.index));
-    const label = escapeHtml(m[0].slice(1));
-    result += `<span class="fi-var" contenteditable="false" data-var="${m[0]}">${label}<span class="fi-del">×</span></span>`;
+    const key = m[0].slice(1);
+    const label = escapeHtml(key);
+    const color = VAR_COLOR_MAP[key] ?? "#7d3c98";
+    const chipStyle = `color:${color};background:${color}14;border:1px solid ${color}40;`;
+    const delStyle = `color:${color};background:${color}26;`;
+    result += `<span class="fi-var" contenteditable="false" data-var="${m[0]}" style="${chipStyle}">${label}<span class="fi-del" style="${delStyle}">×</span></span>`;
     last = m.index + m[0].length;
   }
   if (last < text.length) result += highlightPlain(text.slice(last));
@@ -156,11 +160,18 @@ export function FormulaInput({ value, onChange }: Props) {
     const after = text.slice(offset);
 
     // Build chip element
+    const color = VAR_COLOR_MAP[item] ?? "#7d3c98";
     const chip = document.createElement("span");
     chip.className = "fi-var";
     chip.contentEditable = "false";
     chip.setAttribute("data-var", `@${item}`);
-    chip.innerHTML = escapeHtml(item) + `<span class="fi-del">×</span>`;
+    chip.style.cssText = `color:${color};background:${color}14;border:1px solid ${color}40;`;
+    const del = document.createElement("span");
+    del.className = "fi-del";
+    del.style.cssText = `color:${color};background:${color}26;`;
+    del.textContent = "×";
+    chip.innerHTML = escapeHtml(item);
+    chip.appendChild(del);
 
     const afterNode = document.createTextNode(after);
     const parent = node.parentNode!;
@@ -213,10 +224,6 @@ export function FormulaInput({ value, onChange }: Props) {
         .fi-var {
           display: inline-flex;
           align-items: center;
-          position: relative;
-          color: #7d3c98;
-          background: rgba(125,60,152,0.08);
-          border: 1px solid rgba(125,60,152,0.25);
           border-radius: 4px;
           padding: 0 5px;
           line-height: 18px;
@@ -227,18 +234,19 @@ export function FormulaInput({ value, onChange }: Props) {
         }
         .fi-del {
           display: none;
-          position: absolute;
-          inset: 0;
           align-items: center;
           justify-content: center;
-          background: rgba(125,60,152,0.18);
-          border-radius: 4px;
-          font-size: 13px;
+          margin-left: 2px;
+          width: 14px;
+          height: 14px;
+          border-radius: 3px;
+          font-size: 12px;
           font-weight: bold;
-          color: #7d3c98;
+          line-height: 1;
           cursor: pointer;
+          flex-shrink: 0;
         }
-        .fi-var:hover .fi-del { display: flex; }
+        .fi-var:hover .fi-del { display: inline-flex; }
         [data-placeholder]:empty::before {
           content: attr(data-placeholder);
           color: #9e9e9e;

@@ -123,6 +123,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                     axisB={axisB}
                     locked={bLocked}
                     allLocked={allLocked}
+                    callGuideSet={callGuideSet}
                     onUnlock={() => updateStatus(lead.id, "CONTACTED")}
                     onSubmit={(answers) => submit(lead.id, answers, "Bạn")}
                   />
