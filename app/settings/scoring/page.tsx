@@ -416,7 +416,7 @@ function AxisBTab() {
   const sum = sliderValues.reduce((a, b) => a + b, 0);
 
   return (
-    <div className="p-6 space-y-5 max-w-5xl">
+    <div className="p-6 space-y-5 max-w-5xl overflow-y-auto flex-1 scrollbar-thin">
       <div className="card p-5">
         <div className="flex items-center gap-2 mb-3">
           <LayoutGrid size={16} className="text-ink-3"/>
