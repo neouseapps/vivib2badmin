@@ -199,6 +199,19 @@ export interface CallGuideSet {
   updatedAt: string;
 }
 
+export interface Agent {
+  id: string;
+  name: string;
+  partner: string;
+  email: string;
+  phone: string;
+  permission: "Admin" | "Viewer" | "Editor";
+  source: "Hợp đồng" | "Tự đăng ký" | "Mời";
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type BatchJobStatus = "idle" | "running" | "done";
 
 export interface BatchJobState {

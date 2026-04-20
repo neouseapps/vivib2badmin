@@ -21,7 +21,13 @@ const NAV = [
   { label: "Quản lý yêu cầu", icon: ClipboardList, children: [] },
   { label: "Quản lý task", icon: Layers3, children: [] },
   { label: "Quản lý kịch bản", icon: PlayCircle, children: [] },
-  { label: "Quản lý đối tác", icon: BookOpen, children: [] },
+  {
+    label: "Quản lý đối tác",
+    icon: BookOpen,
+    children: [
+      { href: "/agents", label: "Danh sách agent" },
+    ],
+  },
   { label: "Quản lý phân quyền", icon: Shield, children: [] },
 ];
 
