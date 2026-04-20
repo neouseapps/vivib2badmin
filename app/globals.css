@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  }
+  html, body {
+    font-family: var(--font-sans);
+    color: #212121;
+    background: #ffffff;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    font-size: 14px;
+    line-height: 20px;
+  }
+  * { border-color: #ebebeb; }
+}
+
+@layer components {
+  .card {
+    @apply bg-bg-lv1 border border-line rounded-lg shadow-lv1;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-cap-md font-medium;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 h-9 text-body font-semibold transition-colors;
+  }
+  .btn-primary {
+    @apply btn bg-ink-1 border-ink-1 text-white hover:bg-ink-2;
+  }
+  .btn-secondary {
+    @apply btn bg-bg-lv2 border-bg-lv2 text-ink-1 hover:bg-bg-lv3;
+  }
+  .btn-outline {
+    @apply btn bg-white border-line text-ink-1 hover:bg-bg-lv3;
+  }
+  .btn-ghost {
+    @apply btn border-transparent text-ink-1 hover:bg-bg-lv3;
+  }
+  .input {
+    @apply h-9 w-full rounded-lg border border-line bg-white px-3 text-body text-ink-1 placeholder:text-ink-4 focus:outline-none focus:border-ink-2;
+  }
+  .label {
+    @apply text-cap-md font-medium text-ink-2;
+  }
+  .section-title {
+    @apply text-h4 font-semibold text-ink-1;
+  }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: #d7d7d7; border-radius: 3px; }
+}
+
+/* gauge track */
+.gauge-track { stroke: #ebebeb; }
+.gauge-progress { transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
