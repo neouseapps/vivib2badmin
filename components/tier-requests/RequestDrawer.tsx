@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { type JSX, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, CheckCircle2, Clock, Send,
