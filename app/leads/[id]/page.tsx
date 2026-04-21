@@ -130,16 +130,6 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
               </div>
 
-              {/* Full-width — Câu hỏi gợi ý */}
-              {!bLocked && callGuideSet && (
-                <div className="border-t border-line pt-4">
-                  <CallGuidePanel
-                    guideSet={callGuideSet}
-                    survey={survey}
-                    hasExistingAnswers={!!lead.axisBAnswers}
-                  />
-                </div>
-              )}
 
               {rescoreRecommended && (
                 <div className="border-t border-line pt-2">

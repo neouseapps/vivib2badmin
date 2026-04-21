@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { PhoneCall, Lock, RefreshCw, CheckCircle, X, MessageSquare } from "lucide-react";
+import { PhoneCall, Lock, RefreshCw, CheckCircle, X, MessageSquare, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { AxisBAnswers, CallGuideSet, SurveyConfig } from "@/lib/scoring/types";
 
@@ -27,6 +27,19 @@ export function AxisBWorkspace({ survey, current, axisB, locked, allLocked, call
   const [draft, setDraft] = useState<Record<string, number | undefined>>(() =>
     current ? Object.fromEntries(activeCriteria.map((c) => [c.id, current[c.id]])) : {}
   );
+  const [expandedQuestions, setExpandedQuestions] = useState<Record<string, boolean>>({});
+
+  function toggleQuestions(criterionId: string, hasQuestions: boolean) {
+    if (!hasQuestions) return;
+    setExpandedQuestions((prev) => ({
+      ...prev,
+      [criterionId]: !(prev[criterionId] ?? true),
+    }));
+  }
+
+  function isExpanded(criterionId: string) {
+    return expandedQuestions[criterionId] ?? true;
+  }
 
   const dirty = isDirty(draft, current, ids);
   const allAnswered = activeCriteria.every((c) => draft[c.id] !== undefined);
@@ -120,35 +133,49 @@ export function AxisBWorkspace({ survey, current, axisB, locked, allLocked, call
                 const questions = callGuideSet?.questions.filter(
                   (q) => q.axisBCriterionId === criterion.id
                 ) ?? [];
+                const expanded = isExpanded(criterion.id);
+
                 return (
                   <div key={criterion.id} className="px-5 py-4 space-y-3">
-                    {/* Title */}
+                    {/* Title + subtitle */}
                     <div>
                       <div className="text-body font-medium text-ink-1 mb-0.5">{criterion.name}</div>
                       <div className="text-cap-md text-ink-3 leading-snug">{criterion.help}</div>
                     </div>
 
-                    {/* Call guide questions */}
+                    {/* Collapsible call guide questions */}
                     {questions.length > 0 && (
-                      <div className="rounded-lg bg-bg-lv2 border border-line p-3 space-y-2">
-                        <div className="flex items-center gap-1.5 text-cap text-ink-3 font-medium">
-                          <MessageSquare size={11} />
-                          Câu hỏi gợi ý
-                        </div>
-                        <ul className="space-y-2">
-                          {questions.map((q) => (
-                            <li key={q.id} className="space-y-0.5">
-                              <div className="text-cap-md text-ink-1">{q.text}</div>
-                              {q.hint && (
-                                <div className="text-cap text-ink-3">{q.hint}</div>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="rounded-lg border border-line overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => toggleQuestions(criterion.id, true)}
+                          className="w-full flex items-center gap-1.5 px-3 py-2 bg-bg-lv2 hover:bg-bg-lv3 transition-colors text-left"
+                        >
+                          <MessageSquare size={11} className="text-ink-3 shrink-0" />
+                          <span className="text-cap text-ink-3 font-medium flex-1">
+                            Câu hỏi gợi ý · {questions.length} câu
+                          </span>
+                          <ChevronDown
+                            size={13}
+                            className={cn("text-ink-3 transition-transform", expanded ? "rotate-180" : "")}
+                          />
+                        </button>
+                        {expanded && (
+                          <ul className="divide-y divide-line/60">
+                            {questions.map((q) => (
+                              <li key={q.id} className="px-3 py-2.5 space-y-1">
+                                <div className="text-cap-md text-ink-1 leading-snug">{q.text}</div>
+                                {q.hint && (
+                                  <div className="text-cap text-ink-3 italic leading-snug">{q.hint}</div>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     )}
 
-                    {/* Evaluation options */}
+                    {/* Evaluation options — below questions + subtitle */}
                     <div className="flex gap-2 flex-wrap">
                       {criterion.options.map((opt) => {
                         const isSel = selected === opt.achievement;

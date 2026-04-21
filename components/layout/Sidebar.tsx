@@ -1,12 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Users2, Layers3, Settings, Award, ChevronDown, ClipboardList,
-  Shield, BookOpen, PlayCircle, PanelLeftClose, PanelLeftOpen,
+  Shield, BookOpen, PlayCircle, PanelLeftClose, PanelLeftOpen, Check,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { usePortalStore } from "@/lib/store/portal-store";
 
 const NAV = [
   {
@@ -26,6 +27,7 @@ const NAV = [
     icon: BookOpen,
     children: [
       { href: "/agents", label: "Danh sách agent" },
+      { href: "/tier-requests", label: "Yêu cầu nâng hạng" },
     ],
   },
   { label: "Quản lý phân quyền", icon: Shield, children: [] },
@@ -33,27 +35,73 @@ const NAV = [
 
 export function Sidebar() {
   const path = usePathname();
+  const router = useRouter();
+  const setPortal = usePortalStore((s) => s.setPortal);
   const [collapsed, setCollapsed] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const switcherRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (switcherRef.current && !switcherRef.current.contains(e.target as Node)) {
+        setSwitcherOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  function switchToPartner() {
+    setPortal("partner");
+    setSwitcherOpen(false);
+    router.push("/partner/business-profile");
+  }
 
   return (
     <aside className={cn(
       "shrink-0 border-r border-line bg-bg-lv1 flex flex-col transition-[width] duration-200 overflow-hidden",
       collapsed ? "w-[72px]" : "w-[260px]"
     )}>
-      {/* Header */}
+      {/* Header with portal switcher */}
       <div className={cn(
-        "h-[60px] flex items-center gap-2 px-4 border-b border-line shrink-0",
+        "h-[60px] flex items-center gap-2 px-4 border-b border-line shrink-0 relative",
         collapsed && "justify-center px-0"
       )}>
         {!collapsed && (
-          <>
-            <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center shrink-0">
-              <span className="text-white text-cap-md font-bold">VV</span>
-            </div>
-            <div className="text-cap-md font-semibold leading-tight whitespace-nowrap">
-              Admin &amp;<br />Operation Portal
-            </div>
-          </>
+          <div ref={switcherRef} className="flex-1 min-w-0">
+            <button
+              onClick={() => setSwitcherOpen((v) => !v)}
+              className="flex items-center gap-2 w-full text-left hover:opacity-80 transition-opacity"
+            >
+              <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center shrink-0">
+                <span className="text-white text-cap-md font-bold">VV</span>
+              </div>
+              <div className="text-cap-md font-semibold leading-tight whitespace-nowrap flex-1 min-w-0">
+                Admin &amp;<br />Operation Portal
+              </div>
+              <ChevronDown size={12} className={cn("text-ink-3 shrink-0 transition-transform", switcherOpen && "rotate-180")} />
+            </button>
+
+            {switcherOpen && (
+              <div className="absolute left-2 top-[62px] z-50 bg-bg-lv1 border border-line rounded-xl shadow-lg py-1 w-[230px]">
+                <div
+                  className="flex items-center gap-2 w-full px-3 py-2.5 text-body text-ink-1 font-semibold bg-bg-lv3 rounded-lg mx-1 cursor-default"
+                  style={{ width: "calc(100% - 8px)" }}
+                >
+                  <Check size={14} className="text-brand shrink-0" />
+                  <span>Admin &amp; Operation Portal</span>
+                </div>
+                <button
+                  onClick={switchToPartner}
+                  className="flex items-center gap-2 w-full px-3 py-2.5 text-body text-ink-2 hover:bg-bg-lv3 rounded-lg mx-1 text-left"
+                  style={{ width: "calc(100% - 8px)" }}
+                >
+                  <span className="w-4 shrink-0" />
+                  <span>Partner Portal</span>
+                </button>
+              </div>
+            )}
+          </div>
         )}
         <button
           onClick={() => setCollapsed((v) => !v)}
