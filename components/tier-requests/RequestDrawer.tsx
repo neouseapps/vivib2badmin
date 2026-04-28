@@ -13,7 +13,7 @@ import { ApproveModal } from "./ApproveModal";
 import { TierJourney } from "./TierJourney";
 import { SlaCountdown } from "./SlaCountdown";
 import { useTierRequests } from "@/lib/store/tier-requests-store";
-import type { TierRequest, Vertical } from "@/lib/tier-requests/types";
+import type { TierRequest, TierLevel, Vertical } from "@/lib/tier-requests/types";
 import { cn } from "@/lib/cn";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -49,8 +49,8 @@ interface MetaBarProps {
   slaDeadlineAt: string;
   vertical: Vertical;
   location: string;
-  fromTier: number;
-  toTier: number;
+  fromTier: TierLevel;
+  toTier: TierLevel;
   onClickFrom: (e: React.MouseEvent) => void;
 }
 
