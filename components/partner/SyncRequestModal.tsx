@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import {
-  Link2, ArrowRight, ArrowLeft, Check, Building2, MapPin, ChevronDown,
-  AlertCircle,
+  X, Link2, ArrowLeft, ArrowRight, Check, Building2, MapPin,
+  ChevronDown, AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { TierBadge } from "@/components/tier-requests/TierBadge";
@@ -37,13 +36,7 @@ function StepIndicator({ step }: { step: 1 | 2 }) {
 // ─── Facility card ────────────────────────────────────────────────────────────
 
 function FacilityCard({
-  facility,
-  selected,
-  disabled,
-  disabledReason,
-  onClick,
-  showCheckbox,
-  receivedTier,
+  facility, selected, disabled, disabledReason, onClick, showCheckbox, receivedTier,
 }: {
   facility: FacilityRef;
   selected: boolean;
@@ -54,59 +47,54 @@ function FacilityCard({
   receivedTier?: TierLevel | null;
 }) {
   return (
-    <div className="relative group">
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={disabled}
-        className={cn(
-          "w-full text-left rounded-xl border p-4 transition-all",
-          selected && !disabled
-            ? "border-brand bg-brand/5 shadow-sm"
-            : "border-line hover:border-ink-3 hover:bg-bg-lv2",
-          disabled && "opacity-50 cursor-not-allowed bg-bg-lv2"
-        )}
-      >
-        <div className="flex items-start gap-3">
-          {showCheckbox && (
-            <div className={cn(
-              "w-5 h-5 rounded shrink-0 mt-0.5 border-2 flex items-center justify-center transition-colors",
-              selected && !disabled ? "border-brand bg-brand" : "border-line"
-            )}>
-              {selected && !disabled && <Check size={11} className="text-white" />}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="text-body font-semibold text-ink-1 truncate">{facility.name}</span>
-              <TierBadge tier={facility.currentTier} />
-              {receivedTier != null && !disabled && (
-                <span className="flex items-center gap-1 text-cap-md text-info bg-info-light rounded px-1.5 py-0.5 whitespace-nowrap">
-                  → Sẽ nhận <TierBadge tier={receivedTier} />
-                </span>
-              )}
-              {disabled && <AlertCircle size={13} className="text-warn-text shrink-0" />}
-            </div>
-            <div className="flex items-center gap-1 text-cap-md text-ink-3">
-              <MapPin size={11} className="shrink-0" />
-              <span className="truncate">{facility.location}</span>
-              <span className="mx-1">·</span>
-              <span>{facility.vertical}</span>
-            </div>
-            {disabled && disabledReason && (
-              <p className="text-cap-md text-warn-text mt-1.5">{disabledReason}</p>
-            )}
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "w-full text-left rounded-xl border p-4 transition-all",
+        selected && !disabled ? "border-brand bg-brand/5 shadow-sm" : "border-line hover:border-ink-3 hover:bg-bg-lv2",
+        disabled && "opacity-50 cursor-not-allowed bg-bg-lv2"
+      )}
+    >
+      <div className="flex items-start gap-3">
+        {showCheckbox && (
+          <div className={cn(
+            "w-5 h-5 rounded shrink-0 mt-0.5 border-2 flex items-center justify-center transition-colors",
+            selected && !disabled ? "border-brand bg-brand" : "border-line"
+          )}>
+            {selected && !disabled && <Check size={11} className="text-white" />}
           </div>
-          {selected && !showCheckbox && <Check size={16} className="text-brand shrink-0 mt-0.5" />}
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-body font-semibold text-ink-1 truncate">{facility.name}</span>
+            <TierBadge tier={facility.currentTier} />
+            {receivedTier != null && !disabled && (
+              <span className="flex items-center gap-1 text-cap-md text-info bg-info-light rounded px-1.5 py-0.5 whitespace-nowrap">
+                → Sẽ nhận <TierBadge tier={receivedTier} />
+              </span>
+            )}
+            {disabled && <AlertCircle size={13} className="text-warn-text shrink-0" />}
+          </div>
+          <div className="flex items-center gap-1 text-cap-md text-ink-3">
+            <MapPin size={11} className="shrink-0" />
+            <span className="truncate">{facility.location}</span>
+            <span className="mx-1">·</span>
+            <span>{facility.vertical}</span>
+          </div>
+          {disabled && disabledReason && (
+            <p className="text-cap-md text-warn-text mt-1.5">{disabledReason}</p>
+          )}
         </div>
-      </button>
-    </div>
+        {selected && !showCheckbox && <Check size={16} className="text-brand shrink-0 mt-0.5" />}
+      </div>
+    </button>
   );
 }
 
-// ─── Step 1 ───────────────────────────────────────────────────────────────────
+// ─── Source filter ────────────────────────────────────────────────────────────
 
-// Source must: have organic period_tier ≥ 2, be active (not grace), not itself a sync/complimentary recipient
 const sourceFacilities = PARTNER_FACILITIES.filter((f) => {
   const state = FACILITY_TIER_DATA[f.id];
   if (!state) return false;
@@ -118,16 +106,10 @@ const sourceFacilities = PARTNER_FACILITIES.filter((f) => {
   );
 });
 
-// The tier a target facility would receive = source's period_tier (capped by target eligibility)
-function getReceivedTier(sourcePeriodTier: TierLevel): TierLevel {
-  return sourcePeriodTier as TierLevel;
-}
+// ─── Step 1 ───────────────────────────────────────────────────────────────────
 
 function Step1({
-  sourceId,
-  setSourceId,
-  targetIds,
-  setTargetIds,
+  sourceId, setSourceId, targetIds, setTargetIds,
 }: {
   sourceId: string;
   setSourceId: (id: string) => void;
@@ -141,11 +123,9 @@ function Step1({
   const targets = PARTNER_FACILITIES.filter((f) => f.id !== sourceId);
 
   function toggleTarget(id: string) {
-    const facilityState = FACILITY_TIER_DATA[id];
-    if (facilityState?.syncDisabledReason) return;
+    if (FACILITY_TIER_DATA[id]?.syncDisabledReason) return;
     const next = new Set(targetIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
+    next.has(id) ? next.delete(id) : next.add(id);
     setTargetIds(next);
   }
 
@@ -157,7 +137,6 @@ function Step1({
           Cơ sở nguồn <span className="text-danger">*</span>
           <span className="text-cap-md text-ink-3 font-normal ml-2">(Hữu cơ Tier ≥ 2, đang hoạt động)</span>
         </label>
-
         {sourceFacilities.length === 0 ? (
           <div className="rounded-xl border border-line bg-bg-lv2 px-4 py-3 text-body text-ink-3">
             Chưa có cơ sở nào đạt Tier 2 trở lên để làm nguồn đồng bộ.
@@ -179,7 +158,6 @@ function Step1({
               )}
               <ChevronDown size={14} className={cn("text-ink-3 transition-transform", sourceOpen && "rotate-180")} />
             </button>
-
             {sourceOpen && (
               <div className="absolute z-20 mt-1 w-full bg-bg-lv1 border border-line rounded-xl shadow-lv2 py-1">
                 {sourceFacilities.map((f) => (
@@ -206,7 +184,6 @@ function Step1({
           Cơ sở đích <span className="text-danger">*</span>
           <span className="text-cap-md text-ink-3 font-normal ml-2">(có thể chọn nhiều)</span>
         </label>
-
         {!sourceId || targets.length === 0 ? (
           <p className="text-body text-ink-3 text-center py-6">Chọn cơ sở nguồn trước.</p>
         ) : (
@@ -254,10 +231,7 @@ const DURATIONS: { value: 30 | 60 | 90; label: string }[] = [
 ];
 
 function Step2({
-  duration,
-  setDuration,
-  justification,
-  setJustification,
+  duration, setDuration, justification, setJustification,
 }: {
   duration: 30 | 60 | 90;
   setDuration: (d: 30 | 60 | 90) => void;
@@ -265,7 +239,6 @@ function Step2({
   setJustification: (s: string) => void;
 }) {
   const minChars = 50;
-
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -288,7 +261,6 @@ function Step2({
           ))}
         </div>
       </div>
-
       <div>
         <label className="text-body font-semibold text-ink-1 block mb-2">
           Lý do đồng bộ hạng <span className="text-danger">*</span>
@@ -297,7 +269,7 @@ function Step2({
         <textarea
           value={justification}
           onChange={(e) => setJustification(e.target.value)}
-          placeholder="Mô tả lý do bạn muốn đồng bộ hạng giữa các cơ sở. Ví dụ: Các chi nhánh đang đáp ứng cùng tiêu chuẩn dịch vụ với cơ sở đầu hệ thống…"
+          placeholder="Mô tả lý do bạn muốn đồng bộ hạng giữa các cơ sở…"
           rows={5}
           className="input w-full resize-none"
         />
@@ -309,41 +281,25 @@ function Step2({
   );
 }
 
-// ─── Empty state (only 1 facility) ───────────────────────────────────────────
+// ─── Modal ────────────────────────────────────────────────────────────────────
 
-function EmptyState() {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-20">
-      <div className="w-20 h-20 rounded-2xl bg-info-light flex items-center justify-center mb-5">
-        <Building2 size={32} className="text-info" />
-      </div>
-      <h2 className="text-h3 font-bold text-ink-1 mb-2">Chỉ có một cơ sở</h2>
-      <p className="text-body text-ink-2 max-w-sm mb-6">
-        Đồng bộ hạng yêu cầu ít nhất <span className="font-semibold">2 cơ sở trở lên</span>.
-        Hãy đăng ký thêm cơ sở để sử dụng tính năng này.
-      </p>
-      <button className="btn-primary mt-2 flex items-center gap-2">
-        <Building2 size={15} />
-        Mở rộng cơ sở mới
-      </button>
-    </div>
-  );
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-export default function SyncRequestPage() {
-  const router = useRouter();
+export function SyncRequestModal({
+  onClose,
+  onSubmit,
+  initialTargetIds,
+}: {
+  onClose: () => void;
+  /** Called after the mock submit delay. Parent should show a toast. */
+  onSubmit: () => void;
+  /** Pre-selected target facility IDs (from bulk selection in the table). */
+  initialTargetIds?: Set<string>;
+}) {
   const [step, setStep] = useState<1 | 2>(1);
   const [sourceId, setSourceId] = useState(sourceFacilities[0]?.id ?? "");
-  const [targetIds, setTargetIds] = useState<Set<string>>(new Set());
+  const [targetIds, setTargetIds] = useState<Set<string>>(initialTargetIds ?? new Set());
   const [duration, setDuration] = useState<30 | 60 | 90>(30);
   const [justification, setJustification] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  if (PARTNER_FACILITIES.length <= 1) {
-    return <EmptyState />;
-  }
 
   const step1Valid = !!sourceId && targetIds.size > 0;
   const step2Valid = justification.length >= 50;
@@ -351,69 +307,95 @@ export default function SyncRequestPage() {
   async function handleSubmit() {
     if (!step2Valid) return;
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    router.push("/partner/my-tier/history?submitted=1");
+    await new Promise((r) => setTimeout(r, 900));
+    onSubmit();
+    onClose();
   }
 
+  const isOnlyOneFacility = PARTNER_FACILITIES.length <= 1;
+
   return (
-    <div className="max-w-2xl mx-auto w-full px-6 py-6 flex flex-col gap-6">
-        {step === 2 && (
-          <button
-            onClick={() => setStep(1)}
-            className="flex items-center gap-1.5 text-cap-md text-ink-3 hover:text-ink-1 transition-colors self-start"
-          >
-            <ArrowLeft size={14} />
-            Quay lại bước 1
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink-1/40 backdrop-blur-sm p-4">
+      <div className="bg-bg-lv1 rounded-2xl shadow-lv2 w-full max-w-[640px] max-h-[90vh] flex flex-col">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line shrink-0">
+          <div>
+            <h3 className="text-lg font-semibold text-ink-1">Gửi yêu cầu đồng bộ hạng</h3>
+            <p className="text-cap-md text-ink-3 mt-0.5">
+              Áp dụng hạng cao từ cơ sở đầu hệ thống xuống các chi nhánh còn lại
+            </p>
+          </div>
+          <button onClick={onClose} className="text-ink-3 hover:text-ink-1 transition-colors ml-4 shrink-0">
+            <X size={18} />
           </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-5">
+          {isOnlyOneFacility ? (
+            <div className="flex flex-col items-center text-center py-12">
+              <div className="w-16 h-16 rounded-2xl bg-info-light flex items-center justify-center mb-4">
+                <Building2 size={28} className="text-info" />
+              </div>
+              <h4 className="text-h3 font-bold text-ink-1 mb-2">Chỉ có một cơ sở</h4>
+              <p className="text-body text-ink-2 max-w-xs">
+                Đồng bộ hạng yêu cầu ít nhất <span className="font-semibold">2 cơ sở trở lên</span>.
+              </p>
+            </div>
+          ) : (
+            <>
+              <StepIndicator step={step} />
+              {step === 1 ? (
+                <Step1
+                  sourceId={sourceId}
+                  setSourceId={setSourceId}
+                  targetIds={targetIds}
+                  setTargetIds={setTargetIds}
+                />
+              ) : (
+                <Step2
+                  duration={duration}
+                  setDuration={setDuration}
+                  justification={justification}
+                  setJustification={setJustification}
+                />
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        {!isOnlyOneFacility && (
+          <div className="px-6 py-4 border-t border-line flex items-center justify-between shrink-0">
+            <button
+              onClick={() => step === 2 ? setStep(1) : onClose()}
+              className="btn-outline flex items-center gap-1"
+            >
+              <ArrowLeft size={14} />
+              {step === 2 ? "Bước trước" : "Hủy"}
+            </button>
+
+            {step === 1 ? (
+              <button
+                onClick={() => setStep(2)}
+                disabled={!step1Valid}
+                className={cn("btn-primary flex items-center gap-1", !step1Valid && "opacity-40 cursor-not-allowed")}
+              >
+                Tiếp theo <ArrowRight size={14} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={!step2Valid || submitting}
+                className={cn("btn-primary flex items-center gap-1", (!step2Valid || submitting) && "opacity-40 cursor-not-allowed")}
+              >
+                {submitting ? "Đang gửi…" : <>Gửi yêu cầu <ArrowRight size={14} /></>}
+              </button>
+            )}
+          </div>
         )}
-
-        <StepIndicator step={step} />
-
-        <div className="card p-6">
-          {step === 1 ? (
-            <Step1
-              sourceId={sourceId}
-              setSourceId={setSourceId}
-              targetIds={targetIds}
-              setTargetIds={setTargetIds}
-            />
-          ) : (
-            <Step2
-              duration={duration}
-              setDuration={setDuration}
-              justification={justification}
-              setJustification={setJustification}
-            />
-          )}
-        </div>
-
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => step === 2 ? setStep(1) : router.push("/partner/my-tier")}
-            className="btn-outline flex items-center gap-1"
-          >
-            <ArrowLeft size={14} />
-            {step === 2 ? "Bước trước" : "Hủy"}
-          </button>
-
-          {step === 1 ? (
-            <button
-              onClick={() => setStep(2)}
-              disabled={!step1Valid}
-              className={cn("btn-primary flex items-center gap-1", !step1Valid && "opacity-40 cursor-not-allowed")}
-            >
-              Tiếp theo <ArrowRight size={14} />
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={!step2Valid || submitting}
-              className={cn("btn-primary flex items-center gap-1", (!step2Valid || submitting) && "opacity-40 cursor-not-allowed")}
-            >
-              {submitting ? "Đang gửi…" : <>Gửi yêu cầu <ArrowRight size={14} /></>}
-            </button>
-          )}
-        </div>
+      </div>
     </div>
   );
 }

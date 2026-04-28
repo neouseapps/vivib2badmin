@@ -29,10 +29,7 @@ const NAV: NavItem[] = [
     label: "Hồ sơ & Dịch vụ",
     icon: FileText,
     children: [
-      { href: "/partner/business-profile", label: "Hồ sơ doanh nghiệp" },
-      { href: "/partner/my-tier", label: "Xếp hạng dịch vụ" },
-      { href: "/partner/my-tier/sync-request", label: "Đồng bộ hạng" },
-      { href: "/partner/my-tier/history", label: "Lịch sử yêu cầu" },
+      { href: "/partner/services-v2", label: "Dịch vụ & Xếp hạng" },
     ],
   },
   {

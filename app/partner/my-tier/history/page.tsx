@@ -220,16 +220,10 @@ function HistoryInner() {
 
 export default function HistoryPage() {
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-bg-lv2">
-      <div className="max-w-4xl mx-auto w-full px-6 py-6 flex flex-col gap-5">
-        <div>
-          <h1 className="text-h3 font-bold text-ink-1">Lịch sử yêu cầu</h1>
-          <p className="text-body text-ink-3 mt-1">Theo dõi trạng thái các yêu cầu nâng hạng và đồng bộ hạng</p>
-        </div>
-        <Suspense fallback={null}>
-          <HistoryInner />
-        </Suspense>
-      </div>
+    <div className="max-w-4xl mx-auto w-full px-6 py-6 flex flex-col gap-5">
+      <Suspense fallback={null}>
+        <HistoryInner />
+      </Suspense>
     </div>
   );
 }

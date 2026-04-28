@@ -14,6 +14,7 @@ import {
   PARTNER_FACILITIES,
   FACILITY_TIER_DATA,
   PARTNER_HISTORY_BY_FACILITY,
+  getFreshnessScore,
   type FacilityTierState,
   type QuickVerifyField,
   type RoadmapMetric,
@@ -22,6 +23,8 @@ import {
 } from "@/lib/mock/partnerTier";
 import type { TierTrack, SystemChecklist } from "@/lib/tier-requests/types";
 import { usePartnerTierStore } from "@/lib/store/partner-tier-store";
+import { TierTrackPanel } from "@/components/partner/TierTrackPanel";
+import { QuickVerifyModal } from "@/components/partner/QuickVerifyModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -46,16 +49,19 @@ const TIER_ICON_CLASS: Record<number, string> = {
 
 const PILLAR_COLORS = ["bg-info", "bg-success", "bg-warn", "bg-grade-a"];
 
-const FRESHNESS_HINT    = 20;  // day 20+: subtle info nudge
-const FRESHNESS_WARN    = 61;  // day 61+: amber warning
-const FRESHNESS_URGENT  = 91;  // day 91+: red urgent
+// Banner thresholds (per spec)
+const FRESHNESS_HINT        = 20;   // day 20: blue info banner
+const FRESHNESS_WARN        = 61;   // day 61: amber banner (score drops to 50)
+const FRESHNESS_PRE_URGENT  = 80;   // day 80: critical alert — approaching 0
+const FRESHNESS_URGENT      = 91;   // day 91: red banner — score = 0
 
-type FreshnessStage = "hint" | "warn" | "urgent";
+type FreshnessStage = "hint" | "warn" | "pre_urgent" | "urgent";
 
 function getFreshnessStage(days: number): FreshnessStage | null {
-  if (days >= FRESHNESS_URGENT) return "urgent";
-  if (days >= FRESHNESS_WARN)   return "warn";
-  if (days >= FRESHNESS_HINT)   return "hint";
+  if (days >= FRESHNESS_URGENT)     return "urgent";
+  if (days >= FRESHNESS_PRE_URGENT) return "pre_urgent";
+  if (days >= FRESHNESS_WARN)       return "warn";
+  if (days >= FRESHNESS_HINT)       return "hint";
   return null;
 }
 
@@ -183,53 +189,79 @@ function LoadingOverlay() {
 
 const FRESHNESS_STAGE_STYLE: Record<FreshnessStage, {
   container: string; iconClass: string; textClass: string;
-  Icon: React.ElementType; btnClass: string; message: string;
+  Icon: React.ElementType; btnClass: string;
+  scoreLabel: string; message: string;
 }> = {
   hint: {
-    container: "bg-info-light border-info/20",
+    container:  "bg-info-light border-info/20",
     iconClass:  "text-info",
     textClass:  "text-info",
     Icon: Info,
     btnClass:   "text-info",
-    message:    "đã {days} ngày chưa cập nhật. Xác nhận sớm để giữ điểm tín nhiệm.",
+    scoreLabel: "100 điểm",
+    message:    "đã {days} ngày chưa xác nhận. Xác nhận ngay để duy trì 100 điểm Freshness trước khi điểm bắt đầu giảm.",
   },
   warn: {
-    container: "bg-warn-light border-warn/30",
+    container:  "bg-warn-light border-warn/30",
     iconClass:  "text-warn-text",
     textClass:  "text-warn-text",
     Icon: AlertTriangle,
     btnClass:   "text-warn-text",
-    message:    "đã {days} ngày chưa cập nhật — điểm tín nhiệm đang bị ảnh hưởng. Xác nhận ngay.",
+    scoreLabel: "50 điểm",
+    message:    "đã {days} ngày chưa xác nhận — Freshness Score còn 50 điểm. Xác minh sớm để tránh tiếp tục giảm điểm.",
+  },
+  pre_urgent: {
+    container:  "bg-warn-light border-warn/40",
+    iconClass:  "text-warn-text",
+    textClass:  "text-warn-text",
+    Icon: AlertOctagon,
+    btnClass:   "text-warn-text",
+    scoreLabel: "50 điểm",
+    message:    "đã {days} ngày chưa xác nhận — hồ sơ sắp rơi về 0 điểm! Chỉ còn {remaining} ngày trước khi Freshness Score tụt về 0.",
   },
   urgent: {
-    container: "bg-danger/5 border-danger/30",
+    container:  "bg-danger/5 border-danger/30",
     iconClass:  "text-danger",
     textClass:  "text-danger",
     Icon: AlertOctagon,
     btnClass:   "text-danger",
-    message:    "đã {days} ngày chưa cập nhật. Hồ sơ có nguy cơ bị hạ hạng — cần xác nhận ngay!",
+    scoreLabel: "0 điểm",
+    message:    "đã {days} ngày chưa xác nhận — Freshness Score đã về 0 điểm. Xác nhận ngay để khôi phục điểm và duy trì xếp hạng.",
   },
 };
 
 function FreshnessBanner({ facilityName, days, stage, onVerify }: {
   facilityName: string; days: number; stage: FreshnessStage; onVerify: () => void;
 }) {
-  const { container, iconClass, textClass, Icon, btnClass, message } = FRESHNESS_STAGE_STYLE[stage];
-  const text = message.replace("{days}", String(days));
+  const { container, iconClass, textClass, Icon, btnClass, scoreLabel, message } = FRESHNESS_STAGE_STYLE[stage];
+  const text = message
+    .replace("{days}", String(days))
+    .replace("{remaining}", String(90 - days));
+
+  const score = getFreshnessScore(days);
 
   return (
-    <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3", container)}>
-      <Icon size={16} className={cn("shrink-0 mt-0.5", iconClass)} />
-      <p className={cn("text-body flex-1", textClass)}>
-        Thông tin hồ sơ của{" "}
-        <span className="font-semibold">{facilityName}</span>{" "}{text}
-      </p>
-      <button
-        onClick={onVerify}
-        className={cn("shrink-0 text-cap-md font-semibold underline underline-offset-2 hover:no-underline whitespace-nowrap", btnClass)}
-      >
-        Xác nhận ngay
-      </button>
+    <div className={cn("rounded-xl border px-4 py-3", container)}>
+      <div className="flex items-start gap-3">
+        <Icon size={16} className={cn("shrink-0 mt-0.5", iconClass)} />
+        <div className="flex-1 min-w-0">
+          <p className={cn("text-body", textClass)}>
+            Thông tin hồ sơ của{" "}
+            <span className="font-semibold">{facilityName}</span>{" "}{text}
+          </p>
+          <div className={cn("flex items-center gap-2 mt-2 text-cap-md", textClass)}>
+            <span className="font-semibold">Freshness Score: {score} điểm</span>
+            <span className="opacity-60">·</span>
+            <span>{days} ngày kể từ lần xác nhận cuối</span>
+          </div>
+        </div>
+        <button
+          onClick={onVerify}
+          className={cn("shrink-0 text-cap-md font-semibold underline underline-offset-2 hover:no-underline whitespace-nowrap", btnClass)}
+        >
+          Xác nhận ngay
+        </button>
+      </div>
     </div>
   );
 }
@@ -527,105 +559,19 @@ function UpRankRoadmap({
   );
 }
 
-// ─── Track Status Panel ───────────────────────────────────────────────────────
+
+// ─── Track Status Panel (uses shared TierTrackPanel) ─────────────────────────
 
 function TrackStatusPanel({ data }: { data: FacilityTierState }) {
-  const {
-    period_tier, tier_status, grace_period_expiry,
-    synchronized_tier, synchronized_tier_source, synchronized_tier_expiry,
-    complimentary_tier, complimentary_tier_expiry,
-  } = data;
-
-  const hasPeriod = period_tier > 0;
-  const hasSync = synchronized_tier !== null;
-  const hasComp = complimentary_tier !== null;
-
-  if (!hasPeriod && !hasSync && !hasComp) return null;
-
-  const rows: React.ReactNode[] = [];
-
-  if (hasPeriod) {
-    rows.push(
-      <div key="period" className="flex items-center gap-4 py-3 px-1">
-        <div className="w-9 h-9 rounded-xl bg-success-light flex items-center justify-center shrink-0">
-          <Sprout size={16} className="text-success" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-body font-semibold text-ink-1">Hữu cơ (Period)</div>
-          <div className="text-cap-md text-ink-3">Không thời hạn</div>
-        </div>
-        <TierBadge tier={period_tier} />
-        {tier_status === "grace_period" ? (
-          <div className="flex items-center gap-2">
-            <span className="chip bg-warn-light text-warn-text flex items-center gap-1">
-              <Clock size={10} /> Grace Period
-            </span>
-            {grace_period_expiry && (
-              <span className="text-cap-md text-warn-text tabular-nums">
-                <SlaCountdown deadline={grace_period_expiry} className="text-cap-md text-warn-text" />
-              </span>
-            )}
-          </div>
-        ) : (
-          <span className="chip bg-success-light text-success flex items-center gap-1">
-            <CheckCircle2 size={10} /> Đang hoạt động
-          </span>
-        )}
-      </div>
-    );
-  }
-
-  if (hasSync && synchronized_tier !== null) {
-    if (rows.length > 0) rows.push(<div key="div-sync" className="border-t border-line" />);
-    rows.push(
-      <div key="sync" className="flex items-center gap-4 py-3 px-1">
-        <div className="w-9 h-9 rounded-xl bg-info-light flex items-center justify-center shrink-0">
-          <Link2 size={16} className="text-info" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-body font-semibold text-ink-1">Đồng bộ (Sync)</div>
-          {synchronized_tier_source && (
-            <div className="text-cap-md text-ink-3 truncate">Nguồn: {synchronized_tier_source}</div>
-          )}
-        </div>
-        <TierBadge tier={synchronized_tier} />
-        {synchronized_tier_expiry && (
-          <div className="text-cap-md text-info tabular-nums">
-            <SlaCountdown deadline={synchronized_tier_expiry} className="text-cap-md text-info" />
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (hasComp && complimentary_tier !== null) {
-    if (rows.length > 0) rows.push(<div key="div-comp" className="border-t border-line" />);
-    rows.push(
-      <div key="comp" className="flex items-center gap-4 py-3 px-1">
-        <div className="w-9 h-9 rounded-xl bg-warn-light flex items-center justify-center shrink-0">
-          <Gift size={16} className="text-warn-text" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-body font-semibold text-ink-1">Ưu đãi (Complimentary)</div>
-          <div className="text-cap-md text-ink-3">Từ chương trình đối tác</div>
-        </div>
-        <TierBadge tier={complimentary_tier} />
-        {complimentary_tier_expiry && (
-          <div className="text-cap-md text-warn-text tabular-nums">
-            <SlaCountdown deadline={complimentary_tier_expiry} className="text-cap-md text-warn-text" />
-          </div>
-        )}
-      </div>
-    );
-  }
-
+  const hasAny = data.period_tier > 0 || data.synchronized_tier !== null || data.complimentary_tier !== null;
+  if (!hasAny) return null;
   return (
     <div className="card p-5">
       <div className="flex items-center gap-2 mb-3">
         <Shield size={15} className="text-ink-3" />
         <h2 className="text-body font-semibold text-ink-1">Chi tiết theo dõi hạng</h2>
       </div>
-      <div className="flex flex-col">{rows}</div>
+      <TierTrackPanel data={data} />
     </div>
   );
 }
@@ -937,77 +883,6 @@ function RecentHistory({ facilityId }: { facilityId: string }) {
   );
 }
 
-// ─── Quick Verify Modal ───────────────────────────────────────────────────────
-
-function QuickVerifyModal({
-  facilityName,
-  fields,
-  onClose,
-  onSubmit,
-}: {
-  facilityName: string;
-  fields: QuickVerifyField[];
-  onClose: () => void;
-  onSubmit: () => void;
-}) {
-  const [checked, setChecked] = useState<Record<string, boolean>>({});
-  const allChecked = fields.every((f) => checked[f.id]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-1/40 backdrop-blur-sm">
-      <div className="bg-bg-lv1 rounded-2xl shadow-lv2 w-[480px] max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-line">
-          <div>
-            <h3 className="text-lg font-semibold text-ink-1">Xác nhận thông tin hồ sơ</h3>
-            <p className="text-cap-md text-ink-3 mt-0.5">{facilityName}</p>
-          </div>
-          <button onClick={onClose} className="text-ink-3 hover:text-ink-1 transition-colors">
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="px-6 py-4 flex-1 overflow-y-auto">
-          <p className="text-body text-ink-2 mb-4">Vui lòng xác nhận các thông tin dưới đây vẫn còn chính xác:</p>
-          <div className="flex flex-col gap-3">
-            {fields.map((field) => (
-              <label
-                key={field.id}
-                className={cn(
-                  "flex items-start gap-3 rounded-xl border p-3.5 cursor-pointer transition-colors",
-                  checked[field.id] ? "border-success bg-success-light/40" : "border-line hover:bg-bg-lv2"
-                )}
-              >
-                <input
-                  type="checkbox"
-                  checked={!!checked[field.id]}
-                  onChange={() => setChecked((prev) => ({ ...prev, [field.id]: !prev[field.id] }))}
-                  className="mt-0.5 shrink-0 accent-success"
-                />
-                <div className="min-w-0">
-                  <div className="text-cap-md text-ink-3 mb-0.5">{field.label}</div>
-                  <div className="text-body font-medium text-ink-1">{field.value}</div>
-                </div>
-                {checked[field.id] && <CheckCircle2 size={16} className="text-success shrink-0 ml-auto mt-0.5" />}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="px-6 py-4 border-t border-line flex items-center justify-end gap-3">
-          <button onClick={onClose} className="btn-outline">Để sau</button>
-          <button
-            onClick={() => { if (allChecked) onSubmit(); }}
-            disabled={!allChecked}
-            className={cn("btn-primary", !allChecked && "opacity-40 cursor-not-allowed")}
-          >
-            Xác nhận — Vẫn chính xác
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
 function Toast({ message, onDone }: { message: string; onDone: () => void }) {
@@ -1067,14 +942,8 @@ export default function MyTierPage() {
   const pendingRequest = facilityHistory.find((h) => h.status === "pending") ?? null;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-bg-lv2">
+    <>
       <div className="max-w-4xl mx-auto w-full px-6 py-6 flex flex-col gap-5">
-
-        {/* Page header */}
-        <div>
-          <h1 className="text-h3 font-bold text-ink-1">Xếp hạng dịch vụ</h1>
-          <p className="text-body text-ink-3 mt-1">Theo dõi phân hạng, lộ trình nâng cấp và đồng bộ hạng</p>
-        </div>
 
         {/* Single-facility promo */}
         {!isMultiFacility && <SingleFacilityBanner />}
@@ -1176,6 +1045,6 @@ export default function MyTierPage() {
         />
       )}
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
-    </div>
+    </>
   );
 }
