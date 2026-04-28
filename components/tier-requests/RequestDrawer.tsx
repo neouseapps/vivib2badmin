@@ -1,10 +1,11 @@
 "use client";
-import { type JSX, useState } from "react";
+import { type JSX, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, CheckCircle2, Clock, Send,
   User, CalendarDays, Timer, MapPin,
   Building2, UtensilsCrossed, Compass, ShoppingBag,
+  AlertTriangle,
 } from "lucide-react";
 import { UpgradeDetails } from "./UpgradeDetails";
 import { SyncDetails } from "./SyncDetails";
@@ -48,36 +49,45 @@ interface MetaBarProps {
   slaDeadlineAt: string;
   vertical: Vertical;
   location: string;
+  fromTier: number;
+  toTier: number;
+  onClickFrom: (e: React.MouseEvent) => void;
 }
 
-function RequestMetaBar({ submittedBy, submittedAt, slaDeadlineAt, vertical, location }: MetaBarProps) {
+function MetaRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 flex-wrap px-4 py-2.5 mb-5 bg-bg-lv2 rounded-lg border border-line text-cap-md text-ink-3">
-      <span className="flex items-center gap-1.5">
-        <User size={13} className="shrink-0" />
-        <span className="text-ink-2 font-medium">{submittedBy}</span>
-      </span>
-      <span className="text-ink-4">·</span>
-      <span className="flex items-center gap-1.5">
-        <CalendarDays size={13} className="shrink-0" />
-        {formatRelative(submittedAt)}
-      </span>
-      <span className="text-ink-4">·</span>
-      <span className="flex items-center gap-1.5">
-        <Timer size={13} className="shrink-0" />
-        <span>SLA:</span>
+    <>
+      <span className="text-ink-3">{label}</span>
+      <span className="text-ink-1">{children}</span>
+    </>
+  );
+}
+
+function RequestMetaBar({ submittedBy, submittedAt, slaDeadlineAt, vertical, location, fromTier, toTier, onClickFrom }: MetaBarProps) {
+  return (
+    <div className="grid grid-cols-[120px_1fr] gap-x-3 gap-y-2 px-4 py-3 mb-5 bg-bg-lv2 rounded-lg border border-line text-cap-md">
+      <MetaRow label="Người nộp">
+        <span className="font-medium">{submittedBy}</span>
+      </MetaRow>
+      <MetaRow label="Loại hình">
+        <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-cap font-medium", VERTICAL_STYLE[vertical])}>
+          {VERTICAL_ICON[vertical]}{vertical}
+        </span>
+      </MetaRow>
+      <MetaRow label="Ngày nộp">
+        <span className="text-ink-2">{formatRelative(submittedAt)}</span>
+      </MetaRow>
+      <MetaRow label="Địa điểm">
+        <span className="text-ink-2 flex items-center gap-1">
+          <MapPin size={12} className="shrink-0" />{location}
+        </span>
+      </MetaRow>
+      <MetaRow label="SLA">
         <SlaCountdown deadline={slaDeadlineAt} />
-      </span>
-      <span className="ml-auto flex items-center gap-2">
-        <span className={cn("flex items-center gap-1 text-cap px-2 py-0.5 rounded font-medium", VERTICAL_STYLE[vertical])}>
-          {VERTICAL_ICON[vertical]}
-          {vertical}
-        </span>
-        <span className="flex items-center gap-1 text-ink-3">
-          <MapPin size={12} className="shrink-0" />
-          {location}
-        </span>
-      </span>
+      </MetaRow>
+      <MetaRow label="Lộ trình">
+        <TierJourney from={fromTier} to={toTier} onClickFrom={onClickFrom} />
+      </MetaRow>
     </div>
   );
 }
@@ -97,6 +107,29 @@ export function RequestDrawer({ request, onClose }: Props) {
   const [approveOpen, setApproveOpen] = useState(false);
   const [deferOpen, setDeferOpen] = useState(false);
   const [deferText, setDeferText] = useState("");
+
+  // Lifted checklist state for approval gate
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  useEffect(() => { setCheckedItems(new Set()); }, [request?.id]);
+
+  function toggleItem(id: string) {
+    setCheckedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  // Phê duyệt chỉ được bật khi toàn bộ chỉ số đạt + tất cả hạng mục thủ công đã tick
+  const canApprove = (() => {
+    if (!request) return false;
+    if (request.details.kind === "upgrade") {
+      const systemOk = Object.values(request.details.systemChecklist).every((m) => m.passed);
+      const manualOk = request.details.complianceItems.every((item) => checkedItems.has(item.id));
+      return systemOk && manualOk;
+    }
+    return true; // sync requests không có checklist
+  })();
 
   function handleApproveConfirm() {
     if (!request) return;
@@ -156,11 +189,6 @@ export function RequestDrawer({ request, onClose }: Props) {
                     )}>
                       {request.status === "pending" ? "Đang chờ" : "Trì hoãn"}
                     </span>
-                    <TierJourney
-                      from={request.fromTier}
-                      to={request.toTier}
-                      onClickFrom={(e) => { e.stopPropagation(); openAuditDrawer(request.id); }}
-                    />
                   </div>
                 </div>
                 <button
@@ -179,6 +207,9 @@ export function RequestDrawer({ request, onClose }: Props) {
                   slaDeadlineAt={request.slaDeadlineAt}
                   vertical={request.facility.vertical}
                   location={request.facility.location}
+                  fromTier={request.fromTier}
+                  toTier={request.toTier}
+                  onClickFrom={(e) => { e.stopPropagation(); openAuditDrawer(request.id); }}
                 />
 
                 {request.deferReason && (
@@ -188,8 +219,20 @@ export function RequestDrawer({ request, onClose }: Props) {
                   </div>
                 )}
 
+                {/* Banner cảnh báo khi chỉ số đã thay đổi sau khi nộp */}
+                {request.details.kind === "upgrade" && !canApprove &&
+                  Object.values(request.details.systemChecklist).some((m) => !m.passed) && (
+                  <div className="mb-5 flex items-start gap-2.5 bg-warn-light border border-warn/30 rounded-lg px-4 py-3 text-cap-md text-warn-text">
+                    <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-semibold">Chỉ số thay đổi sau khi nộp —</span>{" "}
+                      Dữ liệu hệ thống phản ánh trạng thái hiện tại của đối tác. Nếu điểm số bị tụt sau khi phiếu đã nộp, hãy dùng <strong>Trì hoãn</strong> để yêu cầu đối tác cải thiện lại.
+                    </div>
+                  </div>
+                )}
+
                 {request.details.kind === "upgrade" ? (
-                  <UpgradeDetails details={request.details} facility={request.facility} />
+                  <UpgradeDetails details={request.details} facility={request.facility} checked={checkedItems} onToggle={toggleItem} />
                 ) : (
                   <SyncDetails details={request.details} />
                 )}
@@ -248,7 +291,9 @@ export function RequestDrawer({ request, onClose }: Props) {
                 </button>
                 <button
                   onClick={() => setApproveOpen(true)}
-                  className="btn-primary flex items-center gap-1.5 bg-success border-success hover:bg-success/90"
+                  disabled={!canApprove}
+                  className="btn-primary flex items-center gap-1.5 bg-success border-success hover:bg-success/90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={!canApprove ? "Cần hoàn thành tất cả chỉ số và kiểm tra thủ công trước khi phê duyệt" : undefined}
                 >
                   <CheckCircle2 size={14} />
                   Phê duyệt

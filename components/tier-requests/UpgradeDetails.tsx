@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+// checked + onToggle are lifted to RequestDrawer for approval gate
 import { CheckSquare, Square, CheckCircle2, XCircle, ChevronDown } from "lucide-react";
 import type { UpgradeRequest, FacilityRef } from "@/lib/tier-requests/types";
 import { cn } from "@/lib/cn";
@@ -8,20 +9,12 @@ import { cn } from "@/lib/cn";
 interface Props {
   details: UpgradeRequest;
   facility: FacilityRef;
+  checked: Set<string>;
+  onToggle: (id: string) => void;
 }
 
-export function UpgradeDetails({ details }: Props) {
-  const [checked, setChecked] = useState<Set<string>>(new Set());
+export function UpgradeDetails({ details, checked, onToggle }: Props) {
   const [openMetric, setOpenMetric] = useState<string | null>(null);
-
-  function toggle(id: string) {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   const metrics = Object.values(details.systemChecklist);
   const passedCount = metrics.filter((m) => m.passed).length;
@@ -35,7 +28,7 @@ export function UpgradeDetails({ details }: Props) {
       {/* Section A — System verified metrics */}
       <section>
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-cap-md font-semibold text-ink-3 uppercase tracking-wide">Chỉ số hệ thống (System-verified)</span>
+          <span className="text-cap-md font-semibold text-ink-3 uppercase tracking-wide">Độ hoàn thiện hồ sơ</span>
           <span className={cn(
             "chip ml-auto text-cap-md font-semibold",
             allPassed ? "bg-success-light text-success" : "bg-danger-light text-danger"
@@ -95,8 +88,8 @@ export function UpgradeDetails({ details }: Props) {
         </div>
       </section>
 
-      {/* Section B — Manual compliance checklist */}
-      <section>
+      {/* Section B — Manual compliance checklist (ẩn nếu không có manual check) */}
+      {details.complianceItems.length > 0 && <section>
         <div className="flex items-center gap-2 mb-3">
           <span className="text-cap-md font-semibold text-ink-3 uppercase tracking-wide">Kiểm tra thủ công (Admin)</span>
           <span className={cn(
@@ -113,7 +106,7 @@ export function UpgradeDetails({ details }: Props) {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => toggle(item.id)}
+                onClick={() => onToggle(item.id)}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3.5 transition-colors text-left",
                   isChecked ? "bg-success-light/30 hover:bg-success-light/50" : "hover:bg-bg-lv2/60"
@@ -131,7 +124,7 @@ export function UpgradeDetails({ details }: Props) {
             );
           })}
         </div>
-      </section>
+      </section>}
     </div>
   );
 }

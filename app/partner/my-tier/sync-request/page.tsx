@@ -9,7 +9,7 @@ import {
 import { cn } from "@/lib/cn";
 import { TierBadge } from "@/components/tier-requests/TierBadge";
 import { PARTNER_FACILITIES, FACILITY_TIER_DATA } from "@/lib/mock/partnerTier";
-import type { FacilityRef } from "@/lib/tier-requests/types";
+import type { FacilityRef, TierLevel } from "@/lib/tier-requests/types";
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
@@ -43,6 +43,7 @@ function FacilityCard({
   disabledReason,
   onClick,
   showCheckbox,
+  receivedTier,
 }: {
   facility: FacilityRef;
   selected: boolean;
@@ -50,6 +51,7 @@ function FacilityCard({
   disabledReason?: string;
   onClick: () => void;
   showCheckbox?: boolean;
+  receivedTier?: TierLevel | null;
 }) {
   return (
     <div className="relative group">
@@ -75,9 +77,14 @@ function FacilityCard({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="text-body font-semibold text-ink-1 truncate">{facility.name}</span>
               <TierBadge tier={facility.currentTier} />
+              {receivedTier != null && !disabled && (
+                <span className="flex items-center gap-1 text-cap-md text-info bg-info-light rounded px-1.5 py-0.5 whitespace-nowrap">
+                  → Sẽ nhận <TierBadge tier={receivedTier} />
+                </span>
+              )}
               {disabled && <AlertCircle size={13} className="text-warn-text shrink-0" />}
             </div>
             <div className="flex items-center gap-1 text-cap-md text-ink-3">
@@ -99,7 +106,22 @@ function FacilityCard({
 
 // ─── Step 1 ───────────────────────────────────────────────────────────────────
 
-const sourceFacilities = PARTNER_FACILITIES.filter((f) => f.currentTier >= 2);
+// Source must: have organic period_tier ≥ 2, be active (not grace), not itself a sync/complimentary recipient
+const sourceFacilities = PARTNER_FACILITIES.filter((f) => {
+  const state = FACILITY_TIER_DATA[f.id];
+  if (!state) return false;
+  return (
+    state.period_tier >= 2 &&
+    state.tier_status === "active" &&
+    state.synchronized_tier === null &&
+    state.complimentary_tier === null
+  );
+});
+
+// The tier a target facility would receive = source's period_tier (capped by target eligibility)
+function getReceivedTier(sourcePeriodTier: TierLevel): TierLevel {
+  return sourcePeriodTier as TierLevel;
+}
 
 function Step1({
   sourceId,
@@ -114,6 +136,8 @@ function Step1({
 }) {
   const [sourceOpen, setSourceOpen] = useState(false);
   const sourceFacility = PARTNER_FACILITIES.find((f) => f.id === sourceId);
+  const sourceState = sourceId ? FACILITY_TIER_DATA[sourceId] : null;
+  const sourcePeriodTier = (sourceState?.period_tier ?? null) as TierLevel | null;
   const targets = PARTNER_FACILITIES.filter((f) => f.id !== sourceId);
 
   function toggleTarget(id: string) {
@@ -131,7 +155,7 @@ function Step1({
       <div>
         <label className="text-body font-semibold text-ink-1 block mb-2">
           Cơ sở nguồn <span className="text-danger">*</span>
-          <span className="text-cap-md text-ink-3 font-normal ml-2">(Tier ≥ 2)</span>
+          <span className="text-cap-md text-ink-3 font-normal ml-2">(Hữu cơ Tier ≥ 2, đang hoạt động)</span>
         </label>
 
         {sourceFacilities.length === 0 ? (
@@ -199,6 +223,7 @@ function Step1({
                   disabledReason={disabledReason}
                   onClick={() => toggleTarget(f.id)}
                   showCheckbox
+                  receivedTier={sourcePeriodTier}
                 />
               );
             })}
@@ -206,11 +231,11 @@ function Step1({
         )}
       </div>
 
-      {sourceFacility && targetIds.size > 0 && (
+      {sourceFacility && sourcePeriodTier && targetIds.size > 0 && (
         <div className="rounded-xl bg-info-light border border-info/20 px-4 py-3 flex items-center gap-3">
           <Link2 size={15} className="text-info shrink-0" />
           <p className="text-cap-md text-info">
-            Hạng <span className="font-semibold">Tier {sourceFacility.currentTier}</span> từ{" "}
+            Hạng hữu cơ <span className="font-semibold">Tier {sourcePeriodTier}</span> từ{" "}
             <span className="font-semibold">{sourceFacility.name}</span> sẽ được đồng bộ tới{" "}
             <span className="font-semibold">{targetIds.size} cơ sở</span> được chọn.
           </p>

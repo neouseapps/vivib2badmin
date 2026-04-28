@@ -10,10 +10,11 @@ import type {
 export interface RoadmapMetric {
   id: string;
   label: string;
-  current: number;
-  threshold: number;
-  unit: string;
+  current: number;     // boolean gates: 0 = chưa, 1 = đã kích hoạt
+  threshold: number;   // boolean gates: 1
+  unit: string;        // boolean gates: ""
   passed: boolean;
+  kind?: "numeric" | "boolean" | "streak"; // default "numeric"
 }
 
 export interface QuickVerifyField {
@@ -34,6 +35,17 @@ export interface FacilityTierState {
   roadmap: RoadmapMetric[];
   quickVerifyFields: QuickVerifyField[];
   syncDisabledReason?: string;
+  // 3-track breakdown
+  period_tier: TierLevel;
+  synchronized_tier: TierLevel | null;
+  synchronized_tier_source: string | null;
+  synchronized_tier_expiry: string | null;
+  complimentary_tier: TierLevel | null;
+  complimentary_tier_expiry: string | null;
+  // CTA gates
+  tier_readiness_status: "not_ready" | "up_rank_ready";
+  tier_status: "active" | "grace_period";
+  grace_period_expiry: string | null;
 }
 
 // ─── Partner Facilities ───────────────────────────────────────────────────────
@@ -59,7 +71,7 @@ const f = (
 
 export const PARTNER_FACILITIES: FacilityRef[] = [
   f("pf-001", "Mặt Trời Resort Đà Nẵng", 2, "Accommodation", "Đà Nẵng", 75, 80),
-  f("pf-002", "Mặt Trời Boutique Hội An", 1, "Accommodation", "Hội An, Quảng Nam", 58, 62),
+  f("pf-002", "Mặt Trời Boutique Hội An", 1, "Accommodation", "Hội An, Quảng Nam", 74, 78),
   f("pf-003", "Mặt Trời Beach Club Mỹ Khê", 0, "F&B", "Đà Nẵng", 35, 44),
 ];
 
@@ -106,10 +118,12 @@ export const FACILITY_TIER_DATA: Record<string, FacilityTierState> = {
       ],
     },
     roadmap: [
-      { id: "data-score", label: "Data Score",              current: 75, threshold: 85, unit: "điểm", passed: false },
-      { id: "reviews",    label: "Lượt đánh giá 4★ trở lên", current: 15, threshold: 20, unit: "lượt",  passed: false },
-      { id: "gallery",    label: "Ảnh chất lượng cao",       current: 6,  threshold: 15, unit: "ảnh",   passed: false },
-      { id: "skus",       label: "Gói dịch vụ đã khai báo",  current: 12, threshold: 10, unit: "gói",   passed: true  },
+      { id: "data-score",    label: "Data Score",                                        kind: "numeric",  current: 75, threshold: 80, unit: "điểm", passed: false },
+      { id: "service-score", label: "Service Score",                                     kind: "numeric",  current: 80, threshold: 85, unit: "điểm", passed: false },
+      { id: "reviews",       label: "Đánh giá xác thực (12 tháng gần nhất)",            kind: "numeric",  current: 38, threshold: 50, unit: "lượt",  passed: false },
+      { id: "data-contrib",  label: "Đóng góp dữ liệu Cấp 2 (API/đồng bộ tự động)",    kind: "boolean",  current: 0,  threshold: 1,  unit: "",      passed: false },
+      { id: "pay-crypto",    label: "Thanh toán Crypto đã kích hoạt",                    kind: "boolean",  current: 0,  threshold: 1,  unit: "",      passed: false },
+      { id: "direct-book",   label: "Đặt chỗ trực tiếp (Direct Booking) đã kích hoạt", kind: "boolean",  current: 1,  threshold: 1,  unit: "",      passed: true  },
     ],
     quickVerifyFields: [
       { id: "name",    label: "Tên cơ sở",     value: "Mặt Trời Resort Đà Nẵng" },
@@ -117,6 +131,15 @@ export const FACILITY_TIER_DATA: Record<string, FacilityTierState> = {
       { id: "address", label: "Địa chỉ",       value: "18 Trường Sa, Mỹ Khê, Đà Nẵng" },
       { id: "hours",   label: "Giờ mở cửa",    value: "24/7 — Lễ tân thường trực" },
     ],
+    period_tier: 2,
+    synchronized_tier: null,
+    synchronized_tier_source: null,
+    synchronized_tier_expiry: null,
+    complimentary_tier: null,
+    complimentary_tier_expiry: null,
+    tier_readiness_status: "not_ready",
+    tier_status: "active",
+    grace_period_expiry: null,
   },
 
   "pf-002": {
@@ -148,10 +171,13 @@ export const FACILITY_TIER_DATA: Record<string, FacilityTierState> = {
       skus: [],
     },
     roadmap: [
-      { id: "data-score", label: "Data Score",              current: 58, threshold: 70, unit: "điểm", passed: false },
-      { id: "reviews",    label: "Lượt đánh giá 4★ trở lên", current: 8,  threshold: 12, unit: "lượt",  passed: false },
-      { id: "gallery",    label: "Ảnh chất lượng cao",       current: 4,  threshold: 10, unit: "ảnh",   passed: false },
-      { id: "skus",       label: "Gói dịch vụ đã khai báo",  current: 9,  threshold: 8,  unit: "gói",   passed: true  },
+      { id: "data-score",    label: "Data Score",                                      kind: "numeric",  current: 74, threshold: 70, unit: "điểm", passed: true  },
+      { id: "service-score", label: "Service Score",                                   kind: "numeric",  current: 78, threshold: 75, unit: "điểm", passed: true  },
+      { id: "reviews",       label: "Đánh giá xác thực (12 tháng gần nhất)",          kind: "numeric",  current: 28, threshold: 25, unit: "lượt",  passed: true  },
+      { id: "data-contrib",  label: "Đóng góp dữ liệu Cấp 1 (CSV thủ công hàng tháng)", kind: "boolean", current: 1,  threshold: 1,  unit: "",      passed: true  },
+      { id: "pay-qr",        label: "Thanh toán QR đã kích hoạt",                     kind: "boolean",  current: 1,  threshold: 1,  unit: "",      passed: true  },
+      { id: "pay-intcard",   label: "Thanh toán Thẻ quốc tế đã kích hoạt",            kind: "boolean",  current: 1,  threshold: 1,  unit: "",      passed: true  },
+      { id: "streak7d",      label: "Duy trì đủ điều kiện liên tục",                  kind: "streak",   current: 7,  threshold: 7,  unit: "ngày",  passed: true  },
     ],
     quickVerifyFields: [
       { id: "name",    label: "Tên cơ sở",     value: "Mặt Trời Boutique Hội An" },
@@ -159,7 +185,15 @@ export const FACILITY_TIER_DATA: Record<string, FacilityTierState> = {
       { id: "address", label: "Địa chỉ",       value: "24 Trần Phú, Minh An, Hội An" },
       { id: "hours",   label: "Giờ mở cửa",    value: "08:00 – 22:00 hàng ngày" },
     ],
-    syncDisabledReason: "Đang trong thời gian Đồng bộ hạng — còn 15 ngày hiệu lực",
+    period_tier: 1,
+    synchronized_tier: null,
+    synchronized_tier_source: null,
+    synchronized_tier_expiry: null,
+    complimentary_tier: null,
+    complimentary_tier_expiry: null,
+    tier_readiness_status: "up_rank_ready",
+    tier_status: "active",
+    grace_period_expiry: null,
   },
 
   "pf-003": {
@@ -198,10 +232,10 @@ export const FACILITY_TIER_DATA: Record<string, FacilityTierState> = {
       ],
     },
     roadmap: [
-      { id: "data-score", label: "Data Score",              current: 35, threshold: 50, unit: "điểm", passed: false },
-      { id: "reviews",    label: "Lượt đánh giá 4★ trở lên", current: 2,  threshold: 8,  unit: "lượt",  passed: false },
-      { id: "gallery",    label: "Ảnh chất lượng cao",       current: 2,  threshold: 8,  unit: "ảnh",   passed: false },
-      { id: "skus",       label: "Gói dịch vụ đã khai báo",  current: 5,  threshold: 5,  unit: "gói",   passed: true  },
+      { id: "data-score",    label: "Data Score",                                      kind: "numeric",  current: 35, threshold: 50, unit: "điểm", passed: false },
+      { id: "service-score", label: "Service Score",                                   kind: "numeric",  current: 44, threshold: 55, unit: "điểm", passed: false },
+      { id: "reviews",       label: "Đánh giá xác thực (12 tháng gần nhất)",          kind: "numeric",  current: 2,  threshold: 5,  unit: "lượt",  passed: false },
+      { id: "bank-link",     label: "Liên kết tài khoản ngân hàng thụ hưởng",         kind: "boolean",  current: 0,  threshold: 1,  unit: "",      passed: false },
     ],
     quickVerifyFields: [
       { id: "name",    label: "Tên cơ sở",     value: "Mặt Trời Beach Club Mỹ Khê" },
@@ -209,6 +243,15 @@ export const FACILITY_TIER_DATA: Record<string, FacilityTierState> = {
       { id: "address", label: "Địa chỉ",       value: "Bãi biển Mỹ Khê, Sơn Trà, Đà Nẵng" },
       { id: "hours",   label: "Giờ mở cửa",    value: "10:00 – 23:00 hàng ngày" },
     ],
+    period_tier: 0,
+    synchronized_tier: null,
+    synchronized_tier_source: null,
+    synchronized_tier_expiry: null,
+    complimentary_tier: null,
+    complimentary_tier_expiry: null,
+    tier_readiness_status: "not_ready",
+    tier_status: "active",
+    grace_period_expiry: null,
   },
 };
 

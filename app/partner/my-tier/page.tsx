@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   AlertTriangle, CheckCircle2, Lock, Sprout, Link2, Gift,
   ChevronDown, ChevronRight, X, ArrowRight, Building2, Search,
-  Loader2,
+  Loader2, Clock, Shield, Info, AlertOctagon, History,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { TierBadge } from "@/components/tier-requests/TierBadge";
@@ -13,9 +13,12 @@ import { SlaCountdown } from "@/components/tier-requests/SlaCountdown";
 import {
   PARTNER_FACILITIES,
   FACILITY_TIER_DATA,
+  PARTNER_HISTORY_BY_FACILITY,
   type FacilityTierState,
   type QuickVerifyField,
   type RoadmapMetric,
+  type PartnerHistoryItem,
+  type PartnerHistoryStatus,
 } from "@/lib/mock/partnerTier";
 import type { TierTrack, SystemChecklist } from "@/lib/tier-requests/types";
 import { usePartnerTierStore } from "@/lib/store/partner-tier-store";
@@ -43,16 +46,29 @@ const TIER_ICON_CLASS: Record<number, string> = {
 
 const PILLAR_COLORS = ["bg-info", "bg-success", "bg-warn", "bg-grade-a"];
 
-const FRESHNESS_THRESHOLD = 90;
+const FRESHNESS_HINT    = 20;  // day 20+: subtle info nudge
+const FRESHNESS_WARN    = 61;  // day 61+: amber warning
+const FRESHNESS_URGENT  = 91;  // day 91+: red urgent
+
+type FreshnessStage = "hint" | "warn" | "urgent";
+
+function getFreshnessStage(days: number): FreshnessStage | null {
+  if (days >= FRESHNESS_URGENT) return "urgent";
+  if (days >= FRESHNESS_WARN)   return "warn";
+  if (days >= FRESHNESS_HINT)   return "hint";
+  return null;
+}
 
 // ─── Facility Switcher ────────────────────────────────────────────────────────
 
 function FacilitySwitcher({
   selectedId,
   onSelect,
+  compact,
 }: {
   selectedId: string;
   onSelect: (id: string) => void;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -82,7 +98,7 @@ function FacilitySwitcher({
         <span className="text-body font-semibold text-ink-1 max-w-[220px] truncate">
           {selected?.name ?? "Chọn cơ sở"}
         </span>
-        {selected && <TierBadge tier={selected.currentTier} />}
+        {selected && !compact && <TierBadge tier={selected.currentTier} />}
         <ChevronDown
           size={13}
           className={cn("text-ink-3 shrink-0 transition-transform ml-1", open && "rotate-180")}
@@ -165,19 +181,52 @@ function LoadingOverlay() {
 
 // ─── Freshness Banner ─────────────────────────────────────────────────────────
 
-function FreshnessBanner({ facilityName, days, onVerify }: { facilityName: string; days: number; onVerify: () => void }) {
+const FRESHNESS_STAGE_STYLE: Record<FreshnessStage, {
+  container: string; iconClass: string; textClass: string;
+  Icon: React.ElementType; btnClass: string; message: string;
+}> = {
+  hint: {
+    container: "bg-info-light border-info/20",
+    iconClass:  "text-info",
+    textClass:  "text-info",
+    Icon: Info,
+    btnClass:   "text-info",
+    message:    "đã {days} ngày chưa cập nhật. Xác nhận sớm để giữ điểm tín nhiệm.",
+  },
+  warn: {
+    container: "bg-warn-light border-warn/30",
+    iconClass:  "text-warn-text",
+    textClass:  "text-warn-text",
+    Icon: AlertTriangle,
+    btnClass:   "text-warn-text",
+    message:    "đã {days} ngày chưa cập nhật — điểm tín nhiệm đang bị ảnh hưởng. Xác nhận ngay.",
+  },
+  urgent: {
+    container: "bg-danger/5 border-danger/30",
+    iconClass:  "text-danger",
+    textClass:  "text-danger",
+    Icon: AlertOctagon,
+    btnClass:   "text-danger",
+    message:    "đã {days} ngày chưa cập nhật. Hồ sơ có nguy cơ bị hạ hạng — cần xác nhận ngay!",
+  },
+};
+
+function FreshnessBanner({ facilityName, days, stage, onVerify }: {
+  facilityName: string; days: number; stage: FreshnessStage; onVerify: () => void;
+}) {
+  const { container, iconClass, textClass, Icon, btnClass, message } = FRESHNESS_STAGE_STYLE[stage];
+  const text = message.replace("{days}", String(days));
+
   return (
-    <div className="flex items-start gap-3 rounded-xl bg-warn-light border border-warn/30 px-4 py-3">
-      <AlertTriangle size={16} className="text-warn-text shrink-0 mt-0.5" />
-      <p className="text-body text-warn-text flex-1">
+    <div className={cn("flex items-start gap-3 rounded-xl border px-4 py-3", container)}>
+      <Icon size={16} className={cn("shrink-0 mt-0.5", iconClass)} />
+      <p className={cn("text-body flex-1", textClass)}>
         Thông tin hồ sơ của{" "}
-        <span className="font-semibold">{facilityName}</span> đã{" "}
-        <span className="font-semibold">{days} ngày</span> chưa được cập nhật.
-        Hãy xác nhận ngay để duy trì điểm tín nhiệm.
+        <span className="font-semibold">{facilityName}</span>{" "}{text}
       </p>
       <button
         onClick={onVerify}
-        className="shrink-0 text-cap-md font-semibold text-warn-text underline underline-offset-2 hover:no-underline whitespace-nowrap"
+        className={cn("shrink-0 text-cap-md font-semibold underline underline-offset-2 hover:no-underline whitespace-nowrap", btnClass)}
       >
         Xác nhận ngay
       </button>
@@ -187,24 +236,38 @@ function FreshnessBanner({ facilityName, days, onVerify }: { facilityName: strin
 
 // ─── Tier Header Card ─────────────────────────────────────────────────────────
 
-function TierHeaderCard({ data, facilityName }: { data: FacilityTierState; facilityName: string }) {
-  const { tier, tierName, track, expiresAt } = data;
+function TierHeaderCard({
+  data,
+  facilityName,
+  facilitySelector,
+  onGraceExtend,
+}: {
+  data: FacilityTierState;
+  facilityName: string;
+  facilitySelector?: React.ReactNode;
+  onGraceExtend: () => void;
+}) {
+  const { tier, tierName, track, expiresAt, tier_status } = data;
   const trackMeta = track ? TRACK_META[track] : null;
 
   return (
-    <div className="card overflow-hidden">
-      <div className={cn("h-1.5 w-full", TIER_ACCENT[tier])} />
+    <div className="card">
+      <div className={cn("h-1.5 w-full rounded-t-lg", TIER_ACCENT[tier])} />
       <div className="p-6 flex items-center gap-6">
-        <div className={cn("w-20 h-20 rounded-2xl flex items-center justify-center shrink-0 font-bold text-h3", TIER_ICON_CLASS[tier])}>
-          T{tier}
-        </div>
-
         <div className="flex-1 min-w-0">
-          <p className="text-cap-md text-ink-3 truncate mb-1">{facilityName}</p>
+          {facilitySelector
+            ? <div className="mb-2">{facilitySelector}</div>
+            : <p className="text-cap-md text-ink-3 truncate mb-1">{facilityName}</p>
+          }
           <div className="flex items-center gap-2 mb-1.5">
             <TierBadge tier={tier} size="md" />
             <span className="text-ink-3">·</span>
             <span className="text-lg font-semibold text-ink-1">{tierName}</span>
+            {tier_status === "grace_period" && (
+              <span className="chip bg-warn-light text-warn-text text-cap-md flex items-center gap-1">
+                <Clock size={10} /> Grace Period
+              </span>
+            )}
           </div>
           {trackMeta && (
             <div className={cn("flex items-center gap-1.5 text-body", trackMeta.color)}>
@@ -225,9 +288,19 @@ function TierHeaderCard({ data, facilityName }: { data: FacilityTierState; facil
           )}
         </div>
 
-        <Link href="/partner/my-tier/history" className="shrink-0 btn-outline text-cap-md flex items-center gap-1">
-          Lịch sử yêu cầu <ArrowRight size={12} />
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          {tier_status === "grace_period" && (
+            <button
+              onClick={onGraceExtend}
+              className="btn-outline text-cap-md flex items-center gap-1 border-warn/50 text-warn-text hover:bg-warn-light"
+            >
+              <Clock size={12} /> Gia hạn Grace Period
+            </button>
+          )}
+          <Link href="/partner/my-tier/history" className="btn-outline text-cap-md flex items-center gap-1">
+            Lịch sử yêu cầu <ArrowRight size={12} />
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -253,7 +326,10 @@ function CompletenessMeter({
     return () => clearTimeout(t);
   }, [facilityId]);
 
-  const pillars = [completeness.facilities, completeness.operations, completeness.gallery, completeness.skus];
+  const pillars = Object.values(completeness);
+  const overallPct = Math.round(
+    pillars.reduce((sum, p) => sum + Math.min((p.score / p.threshold) * 100, 100), 0) / pillars.length
+  );
 
   return (
     <div className="card p-5">
@@ -262,17 +338,26 @@ function CompletenessMeter({
           <h2 className="text-lg font-semibold text-ink-1">Độ hoàn thiện hồ sơ</h2>
           <p className="text-cap-md text-ink-3 mt-0.5">4 trụ cột ảnh hưởng trực tiếp đến điểm tín nhiệm</p>
         </div>
-        <Link href="/partner/business-profile" className="btn-primary text-cap-md">Hoàn thiện ngay</Link>
-      </div>
-
-      <div className="flex gap-1 h-3 rounded-full overflow-hidden bg-bg-lv3 mb-4">
-        {pillars.map((p, i) => (
-          <div
-            key={p.id}
-            className={cn("h-full rounded-full transition-[width] duration-700 ease-out", PILLAR_COLORS[i])}
-            style={{ width: mounted ? `${Math.min((p.score / p.threshold) * 25, 25)}%` : "0%" }}
-          />
-        ))}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <div className="relative w-9 h-9">
+              <svg className="w-9 h-9 -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3" className="text-bg-lv3" />
+                <circle
+                  cx="18" cy="18" r="14" fill="none" stroke="currentColor" strokeWidth="3"
+                  strokeDasharray={`${overallPct * 0.879} 87.9`}
+                  strokeLinecap="round"
+                  className={overallPct >= 100 ? "text-success" : overallPct >= 80 ? "text-warn" : "text-danger"}
+                />
+              </svg>
+              <span className={cn(
+                "absolute inset-0 flex items-center justify-center text-[9px] font-bold",
+                overallPct >= 100 ? "text-success" : overallPct >= 80 ? "text-warn-text" : "text-danger"
+              )}>{overallPct}%</span>
+            </div>
+          </div>
+          <Link href="/partner/business-profile" className="btn-primary text-cap-md">Hoàn thiện ngay</Link>
+        </div>
       </div>
 
       <div className="flex flex-col gap-1">
@@ -285,16 +370,23 @@ function CompletenessMeter({
             <div key={p.id}>
               <button
                 onClick={() => setOpenPillar(isOpen ? null : p.id)}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-bg-lv3 transition-colors text-left"
+                className="w-full flex flex-col gap-1.5 px-3 py-2.5 rounded-lg hover:bg-bg-lv3 transition-colors text-left"
               >
-                <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", PILLAR_COLORS[i])} />
-                <span className="flex-1 text-body text-ink-1">{p.label}</span>
-                <span className="text-body font-semibold text-ink-2 tabular-nums">{p.score}/{p.threshold}</span>
-                <span className={cn(
-                  "text-cap-md font-medium w-12 text-right",
-                  pct >= 100 ? "text-success" : pct >= 80 ? "text-warn-text" : "text-danger"
-                )}>{pct}%</span>
-                <ChevronDown size={14} className={cn("text-ink-3 transition-transform duration-200 shrink-0", isOpen && "rotate-180")} />
+                <div className="flex items-center gap-3 w-full">
+                  <span className="flex-1 text-body text-ink-1">{p.label}</span>
+                  <span className="text-body font-semibold text-ink-2 tabular-nums">{p.score}/{p.threshold}</span>
+                  <span className={cn(
+                    "text-cap-md font-medium w-12 text-right",
+                    pct >= 100 ? "text-success" : pct >= 80 ? "text-warn-text" : "text-danger"
+                  )}>{pct}%</span>
+                  <ChevronDown size={14} className={cn("text-ink-3 transition-transform duration-200 shrink-0", isOpen && "rotate-180")} />
+                </div>
+                <div className="w-full h-1.5 bg-bg-lv3 rounded-full overflow-hidden">
+                  <div
+                    className={cn("h-full rounded-full transition-[width] duration-700 ease-out", pct >= 100 ? "bg-success" : "bg-danger")}
+                    style={{ width: mounted ? `${Math.min(pct, 100)}%` : "0%" }}
+                  />
+                </div>
               </button>
 
               {isOpen && missing.length > 0 && (
@@ -324,8 +416,18 @@ function CompletenessMeter({
 
 // ─── Up-Rank Roadmap ──────────────────────────────────────────────────────────
 
-function UpRankRoadmap({ roadmap, currentTier }: { roadmap: RoadmapMetric[]; currentTier: number }) {
-  const allPassed = roadmap.every((m) => m.passed);
+function UpRankRoadmap({
+  roadmap,
+  currentTier,
+  readinessStatus,
+  onUpgrade,
+}: {
+  roadmap: RoadmapMetric[];
+  currentTier: number;
+  readinessStatus: "not_ready" | "up_rank_ready";
+  onUpgrade: () => void;
+}) {
+  const isReady = readinessStatus === "up_rank_ready";
 
   return (
     <div className="card p-5">
@@ -346,55 +448,490 @@ function UpRankRoadmap({ roadmap, currentTier }: { roadmap: RoadmapMetric[]; cur
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {roadmap.map((m) => (
-              <tr key={m.id} className="hover:bg-bg-lv2 transition-colors">
-                <td className="px-4 py-3 text-ink-1">{m.label}</td>
-                <td className="px-4 py-3 text-right font-medium tabular-nums text-ink-1">
-                  {m.current} <span className="text-ink-4 font-normal">{m.unit}</span>
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-ink-3">
-                  {m.threshold} <span className="text-ink-4">{m.unit}</span>
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums">
-                  {m.passed
-                    ? <span className="text-success">—</span>
-                    : <span className="text-danger font-medium">+{m.threshold - m.current} {m.unit}</span>}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {m.passed
-                    ? <CheckCircle2 size={16} className="text-success inline-block" />
-                    : <Lock size={14} className="text-ink-4 inline-block" />}
-                </td>
-              </tr>
-            ))}
+            {roadmap.map((m) => {
+              const isBoolean = m.kind === "boolean";
+              const isStreak  = m.kind === "streak";
+              return (
+                <tr key={m.id} className="hover:bg-bg-lv2 transition-colors">
+                  <td className="px-4 py-3 text-ink-1">{m.label}</td>
+
+                  {/* Hiện tại */}
+                  <td className="px-4 py-3 text-right font-medium tabular-nums text-ink-1">
+                    {isBoolean
+                      ? <span className={m.passed ? "text-success" : "text-ink-4"}>
+                          {m.passed ? "Đã kích hoạt" : "Chưa kích hoạt"}
+                        </span>
+                      : <>{m.current} <span className="text-ink-4 font-normal">{m.unit}</span></>}
+                  </td>
+
+                  {/* Ngưỡng */}
+                  <td className="px-4 py-3 text-right tabular-nums text-ink-3">
+                    {isBoolean
+                      ? <span className="text-cap-md">Bắt buộc</span>
+                      : isStreak
+                        ? <span>{m.threshold} {m.unit} liên tục</span>
+                        : <>{m.threshold} <span className="text-ink-4">{m.unit}</span></>}
+                  </td>
+
+                  {/* Còn thiếu */}
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {m.passed
+                      ? <span className="text-success">—</span>
+                      : isBoolean
+                        ? <span className="text-danger font-medium text-cap-md">Chưa hoàn thành</span>
+                        : isStreak
+                          ? <span className="text-danger font-medium">+{m.threshold - m.current} {m.unit}</span>
+                          : <span className="text-danger font-medium">+{m.threshold - m.current} {m.unit}</span>}
+                  </td>
+
+                  {/* Trạng thái */}
+                  <td className="px-4 py-3 text-center">
+                    {m.passed
+                      ? <CheckCircle2 size={16} className="text-success inline-block" />
+                      : <Lock size={14} className="text-ink-4 inline-block" />}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <p className="text-cap-md text-ink-3">
-          {allPassed
-            ? "Bạn đã đủ điều kiện nâng hạng. Hãy gửi yêu cầu ngay!"
-            : `Cần hoàn thiện thêm ${roadmap.filter((m) => !m.passed).length} chỉ số để nâng hạng.`}
+          {isReady
+            ? "Bạn đã đạt đủ điều kiện và duy trì ổn định 7 ngày. Hãy gửi yêu cầu ngay!"
+            : `Cần hoàn thiện thêm ${roadmap.filter((m) => !m.passed).length} điều kiện để mở khóa yêu cầu nâng hạng.`}
         </p>
-        <div className="relative group">
+        <div className="relative group shrink-0">
           <button
-            disabled={!allPassed}
+            onClick={isReady ? onUpgrade : undefined}
+            disabled={!isReady}
             className={cn(
-              "btn-primary transition-all",
-              allPassed
+              "btn-primary transition-all whitespace-nowrap",
+              isReady
                 ? "shadow-[0_0_20px_4px_rgba(200,165,58,0.5)] animate-pulse"
                 : "opacity-40 cursor-not-allowed"
             )}
           >
             Gửi yêu cầu nâng hạng
           </button>
-          {!allPassed && (
-            <div className="absolute bottom-full right-0 mb-2 w-56 bg-ink-1 text-white text-cap-md rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lv2">
-              Hoàn thiện đủ các chỉ số bên trên để mở khoá tính năng này.
+          {!isReady && (
+            <div className="absolute bottom-full right-0 mb-2 w-64 bg-ink-1 text-white text-cap-md rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lv2">
+              Hoàn thiện đủ các điều kiện bên trên và duy trì liên tục 7 ngày để mở khoá tính năng này.
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Track Status Panel ───────────────────────────────────────────────────────
+
+function TrackStatusPanel({ data }: { data: FacilityTierState }) {
+  const {
+    period_tier, tier_status, grace_period_expiry,
+    synchronized_tier, synchronized_tier_source, synchronized_tier_expiry,
+    complimentary_tier, complimentary_tier_expiry,
+  } = data;
+
+  const hasPeriod = period_tier > 0;
+  const hasSync = synchronized_tier !== null;
+  const hasComp = complimentary_tier !== null;
+
+  if (!hasPeriod && !hasSync && !hasComp) return null;
+
+  const rows: React.ReactNode[] = [];
+
+  if (hasPeriod) {
+    rows.push(
+      <div key="period" className="flex items-center gap-4 py-3 px-1">
+        <div className="w-9 h-9 rounded-xl bg-success-light flex items-center justify-center shrink-0">
+          <Sprout size={16} className="text-success" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-body font-semibold text-ink-1">Hữu cơ (Period)</div>
+          <div className="text-cap-md text-ink-3">Không thời hạn</div>
+        </div>
+        <TierBadge tier={period_tier} />
+        {tier_status === "grace_period" ? (
+          <div className="flex items-center gap-2">
+            <span className="chip bg-warn-light text-warn-text flex items-center gap-1">
+              <Clock size={10} /> Grace Period
+            </span>
+            {grace_period_expiry && (
+              <span className="text-cap-md text-warn-text tabular-nums">
+                <SlaCountdown deadline={grace_period_expiry} className="text-cap-md text-warn-text" />
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="chip bg-success-light text-success flex items-center gap-1">
+            <CheckCircle2 size={10} /> Đang hoạt động
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  if (hasSync && synchronized_tier !== null) {
+    if (rows.length > 0) rows.push(<div key="div-sync" className="border-t border-line" />);
+    rows.push(
+      <div key="sync" className="flex items-center gap-4 py-3 px-1">
+        <div className="w-9 h-9 rounded-xl bg-info-light flex items-center justify-center shrink-0">
+          <Link2 size={16} className="text-info" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-body font-semibold text-ink-1">Đồng bộ (Sync)</div>
+          {synchronized_tier_source && (
+            <div className="text-cap-md text-ink-3 truncate">Nguồn: {synchronized_tier_source}</div>
+          )}
+        </div>
+        <TierBadge tier={synchronized_tier} />
+        {synchronized_tier_expiry && (
+          <div className="text-cap-md text-info tabular-nums">
+            <SlaCountdown deadline={synchronized_tier_expiry} className="text-cap-md text-info" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (hasComp && complimentary_tier !== null) {
+    if (rows.length > 0) rows.push(<div key="div-comp" className="border-t border-line" />);
+    rows.push(
+      <div key="comp" className="flex items-center gap-4 py-3 px-1">
+        <div className="w-9 h-9 rounded-xl bg-warn-light flex items-center justify-center shrink-0">
+          <Gift size={16} className="text-warn-text" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-body font-semibold text-ink-1">Ưu đãi (Complimentary)</div>
+          <div className="text-cap-md text-ink-3">Từ chương trình đối tác</div>
+        </div>
+        <TierBadge tier={complimentary_tier} />
+        {complimentary_tier_expiry && (
+          <div className="text-cap-md text-warn-text tabular-nums">
+            <SlaCountdown deadline={complimentary_tier_expiry} className="text-cap-md text-warn-text" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <Shield size={15} className="text-ink-3" />
+        <h2 className="text-body font-semibold text-ink-1">Chi tiết theo dõi hạng</h2>
+      </div>
+      <div className="flex flex-col">{rows}</div>
+    </div>
+  );
+}
+
+// ─── Tier Upgrade Modal ───────────────────────────────────────────────────────
+
+const TIER_OBLIGATIONS: Record<number, string[]> = {
+  2: ["Hiển thị huy hiệu Elite trên trang cơ sở"],
+  3: [
+    "Ký kết Kế hoạch Marketing Chung (Joint Marketing Plan)",
+    "Cam kết ≥ 2 hoạt động co-marketing/năm",
+    "Kết nối API đặt phòng (bắt buộc)",
+  ],
+};
+
+function TierUpgradeModal({
+  currentTier,
+  facilityName,
+  roadmap,
+  onClose,
+  onSubmit,
+}: {
+  currentTier: number;
+  facilityName: string;
+  roadmap: RoadmapMetric[];
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  const targetTier = currentTier + 1;
+  const obligations = TIER_OBLIGATIONS[targetTier] ?? [];
+  const [checked, setChecked] = useState<Record<string, boolean>>({});
+  const allChecked = obligations.length === 0 || obligations.every((_, i) => checked[i]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-1/40 backdrop-blur-sm">
+      <div className="bg-bg-lv1 rounded-2xl shadow-lv2 w-[500px] max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line">
+          <div>
+            <h3 className="text-lg font-semibold text-ink-1">Gửi yêu cầu nâng hạng</h3>
+            <p className="text-cap-md text-ink-3 mt-0.5">{facilityName} · Tier {currentTier} → Tier {targetTier}</p>
+          </div>
+          <button onClick={onClose} className="text-ink-3 hover:text-ink-1 transition-colors"><X size={18} /></button>
+        </div>
+
+        <div className="px-6 py-4 flex-1 overflow-y-auto flex flex-col gap-5">
+          {/* Passed gates */}
+          <div>
+            <p className="text-cap-md font-semibold text-ink-2 mb-2">Điều kiện đã đạt được</p>
+            <div className="rounded-xl bg-success-light/40 border border-success/20 divide-y divide-success/10">
+              {roadmap.map((m) => (
+                <div key={m.id} className="flex items-center gap-3 px-4 py-2.5">
+                  <CheckCircle2 size={14} className="text-success shrink-0" />
+                  <span className="flex-1 text-body text-ink-1">{m.label}</span>
+                  <span className="text-cap-md text-ink-3 tabular-nums">{m.current}/{m.threshold} {m.unit}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Tier obligations */}
+          <div>
+            <p className="text-cap-md font-semibold text-ink-2 mb-2">
+              Cam kết khi đạt Tier {targetTier} <span className="text-danger">*</span>
+            </p>
+            {obligations.length === 0 ? (
+              <p className="text-body text-ink-3 italic">Không có cam kết bổ sung cho hạng này.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {obligations.map((ob, i) => (
+                  <label
+                    key={i}
+                    className={cn(
+                      "flex items-start gap-3 rounded-xl border p-3.5 cursor-pointer transition-colors",
+                      checked[i] ? "border-brand bg-brand/5" : "border-line hover:bg-bg-lv2"
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!checked[i]}
+                      onChange={() => setChecked((prev) => ({ ...prev, [i]: !prev[i] }))}
+                      className="mt-0.5 shrink-0 accent-brand"
+                    />
+                    <span className="text-body text-ink-1">{ob}</span>
+                    {checked[i] && <CheckCircle2 size={15} className="text-brand shrink-0 ml-auto mt-0.5" />}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-line flex items-center justify-end gap-3">
+          <button onClick={onClose} className="btn-outline">Hủy</button>
+          <button
+            onClick={() => { if (allChecked) onSubmit(); }}
+            disabled={!allChecked}
+            className={cn("btn-primary", !allChecked && "opacity-40 cursor-not-allowed")}
+          >
+            Gửi yêu cầu
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Grace Period Extension Modal ─────────────────────────────────────────────
+
+const GRACE_REASONS = [
+  "Cập nhật đang chờ phê duyệt nội bộ",
+  "Sự cố kỹ thuật tạm thời",
+  "Thay đổi nhân sự quản lý",
+  "Điều kiện thị trường bất thường",
+  "Lý do khác",
+];
+
+function GracePeriodExtensionModal({
+  facilityName,
+  graceExpiry,
+  onClose,
+  onSubmit,
+}: {
+  facilityName: string;
+  graceExpiry: string | null;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [details, setDetails] = useState("");
+  const [recoveryDate, setRecoveryDate] = useState("");
+  const [dateError, setDateError] = useState("");
+  const minChars = 50;
+
+  const today = new Date();
+  const minDate = new Date(today.getTime() + 86400000).toISOString().split("T")[0]; // +1 day
+  const maxDate = new Date(today.getTime() + 45 * 86400000).toISOString().split("T")[0]; // +45 days
+
+  function handleDateChange(val: string) {
+    setRecoveryDate(val);
+    if (!val) { setDateError(""); return; }
+    const picked = new Date(val);
+    const max = new Date(maxDate);
+    if (picked > max) {
+      setDateError("Ngày phục hồi phải trong vòng 45 ngày tới");
+    } else {
+      setDateError("");
+    }
+  }
+
+  const isValid = reason !== "" && details.length >= minChars && recoveryDate !== "" && dateError === "";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-1/40 backdrop-blur-sm">
+      <div className="bg-bg-lv1 rounded-2xl shadow-lv2 w-[500px] max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line">
+          <div>
+            <h3 className="text-lg font-semibold text-ink-1">Yêu cầu gia hạn Grace Period</h3>
+            <p className="text-cap-md text-ink-3 mt-0.5">{facilityName}</p>
+          </div>
+          <button onClick={onClose} className="text-ink-3 hover:text-ink-1 transition-colors"><X size={18} /></button>
+        </div>
+
+        <div className="px-6 py-4 flex-1 overflow-y-auto flex flex-col gap-5">
+          {/* Warning */}
+          <div className="flex items-start gap-3 rounded-xl bg-warn-light border border-warn/30 px-4 py-3">
+            <Clock size={15} className="text-warn-text shrink-0 mt-0.5" />
+            <p className="text-body text-warn-text">
+              Đồng hồ Grace Period vẫn tiếp tục chạy trong khi yêu cầu đang chờ xử lý.
+              {graceExpiry && (
+                <> Thời hạn hiện tại: <SlaCountdown deadline={graceExpiry} className="text-body font-semibold text-warn-text" /></>
+              )}
+            </p>
+          </div>
+
+          {/* Reason */}
+          <div>
+            <label className="text-body font-semibold text-ink-1 block mb-1.5">
+              Lý do gia hạn <span className="text-danger">*</span>
+            </label>
+            <select
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="input w-full"
+            >
+              <option value="">— Chọn lý do —</option>
+              {GRACE_REASONS.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Details */}
+          <div>
+            <label className="text-body font-semibold text-ink-1 block mb-1.5">
+              Thông tin bổ sung <span className="text-danger">*</span>
+              <span className="text-cap-md text-ink-3 font-normal ml-2">(tối thiểu {minChars} ký tự)</span>
+            </label>
+            <textarea
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              placeholder="Mô tả chi tiết tình huống và các bước bạn đang thực hiện để khôi phục hạng…"
+              rows={4}
+              className="input w-full resize-none"
+            />
+            <div className={cn("mt-1 text-cap-md text-right", details.length >= minChars ? "text-success" : "text-ink-3")}>
+              {details.length >= minChars ? `✓ ${details.length} ký tự` : `Cần thêm ${minChars - details.length} ký tự`}
+            </div>
+          </div>
+
+          {/* Recovery date */}
+          <div>
+            <label className="text-body font-semibold text-ink-1 block mb-1.5">
+              Ngày phục hồi dự kiến <span className="text-danger">*</span>
+              <span className="text-cap-md text-ink-3 font-normal ml-2">(tối đa 45 ngày)</span>
+            </label>
+            <input
+              type="date"
+              value={recoveryDate}
+              min={minDate}
+              max={maxDate}
+              onChange={(e) => handleDateChange(e.target.value)}
+              className="input w-full"
+            />
+            {dateError && <p className="text-cap-md text-danger mt-1">{dateError}</p>}
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-line flex items-center justify-end gap-3">
+          <button onClick={onClose} className="btn-outline">Hủy</button>
+          <button
+            onClick={() => { if (isValid) onSubmit(); }}
+            disabled={!isValid}
+            className={cn("btn-primary", !isValid && "opacity-40 cursor-not-allowed")}
+          >
+            Gửi yêu cầu gia hạn
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Active Request Banner ────────────────────────────────────────────────────
+
+function ActiveRequestBanner({ item }: { item: PartnerHistoryItem }) {
+  const kindLabel = item.kind === "upgrade" ? "Nâng hạng" : "Đồng bộ hạng";
+  const submittedDate = new Date(item.submittedAt).toLocaleDateString("vi-VN", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+  });
+  return (
+    <div className="flex items-center gap-3 rounded-xl bg-info-light border border-info/20 px-4 py-3">
+      <Clock size={15} className="text-info shrink-0" />
+      <p className="text-body text-info flex-1">
+        Yêu cầu{" "}
+        <span className="font-semibold">{kindLabel} (Tier {item.fromTier} → {item.toTier})</span>{" "}
+        đang chờ xét duyệt — gửi ngày {submittedDate}.
+      </p>
+      <Link href="/partner/my-tier/history" className="shrink-0 text-cap-md font-semibold text-info underline underline-offset-2 hover:no-underline whitespace-nowrap">
+        Xem chi tiết
+      </Link>
+    </div>
+  );
+}
+
+// ─── Inline Recent History ────────────────────────────────────────────────────
+
+const HISTORY_STATUS_META: Record<PartnerHistoryStatus, { label: string; chipClass: string }> = {
+  pending:  { label: "Đang chờ",    chipClass: "bg-info-light text-info"        },
+  approved: { label: "Đã duyệt",    chipClass: "bg-success-light text-success"  },
+  deferred: { label: "Cần bổ sung", chipClass: "bg-warn-light text-warn-text"   },
+  expired:  { label: "Hết hạn",     chipClass: "bg-bg-lv3 text-ink-3"           },
+};
+
+function RecentHistory({ facilityId }: { facilityId: string }) {
+  const items = (PARTNER_HISTORY_BY_FACILITY[facilityId] ?? []).slice(0, 3);
+  if (items.length === 0) return null;
+
+  return (
+    <div className="card p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <History size={15} className="text-ink-3" />
+          <h2 className="text-body font-semibold text-ink-1">Lịch sử yêu cầu gần đây</h2>
+        </div>
+        <Link href="/partner/my-tier/history" className="text-cap-md text-brand hover:underline flex items-center gap-1">
+          Xem tất cả <ArrowRight size={11} />
+        </Link>
+      </div>
+      <div className="flex flex-col divide-y divide-line">
+        {items.map((item) => {
+          const { label, chipClass } = HISTORY_STATUS_META[item.status];
+          const kindLabel = item.kind === "upgrade" ? "Nâng hạng" : "Đồng bộ hạng";
+          const date = new Date(item.submittedAt).toLocaleDateString("vi-VN", {
+            day: "2-digit", month: "2-digit", year: "numeric",
+          });
+          return (
+            <div key={item.id} className="flex items-center gap-4 py-3">
+              <div className="flex-1 min-w-0">
+                <span className="text-body text-ink-1">{kindLabel}</span>
+                <span className="text-cap-md text-ink-3 ml-2">Tier {item.fromTier} → {item.toTier}</span>
+              </div>
+              <span className="text-cap-md text-ink-3 tabular-nums shrink-0">{date}</span>
+              <span className={cn("chip shrink-0", chipClass)}>{label}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -495,6 +1032,8 @@ export default function MyTierPage() {
   const [displayId, setDisplayId] = useState(selectedFacilityId);
   const [dismissedFreshness, setDismissedFreshness] = useState<Set<string>>(new Set());
   const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showGraceExtendModal, setShowGraceExtendModal] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const isMultiFacility = PARTNER_FACILITIES.length > 1;
@@ -511,10 +1050,10 @@ export default function MyTierPage() {
     }, 500);
   }
 
-  const showFreshness =
-    facilityData &&
-    facilityData.freshnessDaysStale >= FRESHNESS_THRESHOLD &&
-    !dismissedFreshness.has(displayId);
+  const freshnessStage = facilityData
+    ? getFreshnessStage(facilityData.freshnessDaysStale)
+    : null;
+  const showFreshness = freshnessStage !== null && !dismissedFreshness.has(displayId);
 
   function handleVerifySubmit() {
     setShowVerifyModal(false);
@@ -524,29 +1063,31 @@ export default function MyTierPage() {
 
   if (!facilityData || !facility) return null;
 
+  const facilityHistory = PARTNER_HISTORY_BY_FACILITY[displayId] ?? [];
+  const pendingRequest = facilityHistory.find((h) => h.status === "pending") ?? null;
+
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-bg-lv2">
       <div className="max-w-4xl mx-auto w-full px-6 py-6 flex flex-col gap-5">
 
         {/* Page header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-h3 font-bold text-ink-1">Hạng của tôi</h1>
-            <p className="text-body text-ink-3 mt-1">Theo dõi phân hạng, lộ trình nâng cấp và đồng bộ hạng</p>
-          </div>
-          {isMultiFacility && (
-            <FacilitySwitcher selectedId={displayId} onSelect={handleFacilitySelect} />
-          )}
+        <div>
+          <h1 className="text-h3 font-bold text-ink-1">Xếp hạng dịch vụ</h1>
+          <p className="text-body text-ink-3 mt-1">Theo dõi phân hạng, lộ trình nâng cấp và đồng bộ hạng</p>
         </div>
 
         {/* Single-facility promo */}
         {!isMultiFacility && <SingleFacilityBanner />}
 
+        {/* Active pending request banner */}
+        {pendingRequest && <ActiveRequestBanner item={pendingRequest} />}
+
         {/* Freshness banner */}
-        {showFreshness && (
+        {showFreshness && freshnessStage && (
           <FreshnessBanner
             facilityName={facility.name}
             days={facilityData.freshnessDaysStale}
+            stage={freshnessStage}
             onVerify={() => setShowVerifyModal(true)}
           />
         )}
@@ -559,7 +1100,14 @@ export default function MyTierPage() {
             </div>
           )}
 
-          <TierHeaderCard data={facilityData} facilityName={facility.name} />
+          <TierHeaderCard
+            data={facilityData}
+            facilityName={facility.name}
+            facilitySelector={isMultiFacility ? <FacilitySwitcher selectedId={displayId} onSelect={handleFacilitySelect} compact /> : undefined}
+            onGraceExtend={() => setShowGraceExtendModal(true)}
+          />
+
+          <TrackStatusPanel data={facilityData} />
 
           <CompletenessMeter
             completeness={facilityData.completeness}
@@ -567,7 +1115,12 @@ export default function MyTierPage() {
             facilityId={displayId}
           />
 
-          <UpRankRoadmap roadmap={facilityData.roadmap} currentTier={facilityData.tier} />
+          <UpRankRoadmap
+            roadmap={facilityData.roadmap}
+            currentTier={facilityData.tier}
+            readinessStatus={facilityData.tier_readiness_status}
+            onUpgrade={() => setShowUpgradeModal(true)}
+          />
 
           {/* Sync CTA (only for multi-facility) */}
           {isMultiFacility && (
@@ -586,6 +1139,8 @@ export default function MyTierPage() {
               </Link>
             </div>
           )}
+
+          <RecentHistory facilityId={displayId} />
         </div>
       </div>
 
@@ -595,6 +1150,29 @@ export default function MyTierPage() {
           fields={facilityData.quickVerifyFields}
           onClose={() => setShowVerifyModal(false)}
           onSubmit={handleVerifySubmit}
+        />
+      )}
+      {showUpgradeModal && (
+        <TierUpgradeModal
+          currentTier={facilityData.tier}
+          facilityName={facility.name}
+          roadmap={facilityData.roadmap}
+          onClose={() => setShowUpgradeModal(false)}
+          onSubmit={() => {
+            setShowUpgradeModal(false);
+            setToast("Yêu cầu nâng hạng đã được gửi thành công.");
+          }}
+        />
+      )}
+      {showGraceExtendModal && (
+        <GracePeriodExtensionModal
+          facilityName={facility.name}
+          graceExpiry={facilityData.grace_period_expiry}
+          onClose={() => setShowGraceExtendModal(false)}
+          onSubmit={() => {
+            setShowGraceExtendModal(false);
+            setToast("Yêu cầu gia hạn Grace Period đã được gửi tới Admin.");
+          }}
         />
       )}
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}

@@ -4,25 +4,81 @@ import type { TierRequest, FacilityRef, TierAuditEntry, ComplianceItem, SystemCh
 const BASE = 1776765600000;
 const d = (offsetHours: number) => new Date(BASE + offsetHours * 3600000).toISOString();
 
-const COMPLIANCE: ComplianceItem[] = [
-  { id: "co-marketing", label: "Đã ký thỏa thuận co-marketing" },
-  { id: "field-visit", label: "Đã xác minh thực tế qua Field Visit (nếu yêu cầu)" },
-  { id: "legal-clean", label: "Hồ sơ pháp lý không có tranh chấp" },
-];
+// ─── Checklist helpers ────────────────────────────────────────────────────────
 
-function checklist(
-  facScore: number, facThresh: number,
-  opsScore: number, opsThresh: number,
-  galScore: number, galThresh: number,
-  skuScore: number, skuThresh: number,
-): SystemChecklist {
+/** Tier 0 → 1: baseline onboarding criteria */
+function cl0to1(dataScore: number, serviceScore: number, reviews: number): SystemChecklist {
   return {
-    facilities: { id: "facilities", label: "Cơ sở vật chất & Tiện ích", score: facScore, threshold: facThresh, passed: facScore >= facThresh },
-    operations: { id: "operations", label: "Chính sách vận hành", score: opsScore, threshold: opsThresh, passed: opsScore >= opsThresh },
-    gallery: { id: "gallery", label: "Hình ảnh (Gallery)", score: galScore, threshold: galThresh, passed: galScore >= galThresh },
-    skus: { id: "skus", label: "Danh mục sản phẩm (SKUs)", score: skuScore, threshold: skuThresh, passed: skuScore >= skuThresh },
+    dataScore:        { id: "dataScore",        label: "Data Score",                           score: dataScore,    threshold: 50, passed: dataScore >= 50 },
+    serviceScore:     { id: "serviceScore",      label: "Service Score",                        score: serviceScore, threshold: 55, passed: serviceScore >= 55 },
+    verifiedReviews:  { id: "verifiedReviews",   label: "Đánh giá xác thực (12 tháng gần nhất)", score: reviews,     threshold: 5,  passed: reviews >= 5 },
   };
 }
+
+/** Tier 1 → 2: chất lượng ổn định — toàn bộ tự động, không có manual check */
+function cl1to2(
+  dataScore: number, serviceScore: number, reviews: number,
+  opts: { dataContrib?: boolean; payQR?: boolean; payIntCard?: boolean; streakDays?: number } = {}
+): SystemChecklist {
+  const { dataContrib = false, payQR = false, payIntCard = false, streakDays = 0 } = opts;
+  return {
+    dataScore:       { id: "dataScore",       label: "Data Score",                             score: dataScore,             threshold: 70,  passed: dataScore >= 70 },
+    serviceScore:    { id: "serviceScore",     label: "Service Score",                          score: serviceScore,          threshold: 75,  passed: serviceScore >= 75 },
+    verifiedReviews: { id: "verifiedReviews",  label: "Đánh giá xác thực (12 tháng gần nhất)", score: reviews,               threshold: 25,  passed: reviews >= 25 },
+    dataContrib:     { id: "dataContrib",      label: "Đóng góp dữ liệu Cấp 1 (CSV thủ công)", score: dataContrib ? 100 : 0,  threshold: 100, passed: dataContrib },
+    payQR:           { id: "payQR",            label: "Thanh toán QR đã kích hoạt",             score: payQR ? 100 : 0,       threshold: 100, passed: payQR },
+    payIntCard:      { id: "payIntCard",       label: "Thanh toán Thẻ quốc tế đã kích hoạt",   score: payIntCard ? 100 : 0,  threshold: 100, passed: payIntCard },
+    streak7d:        { id: "streak7d",         label: "Duy trì điều kiện liên tục (ngày)",      score: streakDays,            threshold: 7,   passed: streakDays >= 7 },
+  };
+}
+
+/** Tier 2 → 3: đối tác xuất sắc — tech gates tự động, marketing checks do Admin */
+function cl2to3(
+  dataScore: number, serviceScore: number, reviews: number,
+  opts: { dataContrib?: boolean; payCrypto?: boolean; directBook?: boolean } = {}
+): SystemChecklist {
+  const { dataContrib = false, payCrypto = false, directBook = false } = opts;
+  return {
+    dataScore:       { id: "dataScore",       label: "Data Score",                                        score: dataScore,             threshold: 80,  passed: dataScore >= 80 },
+    serviceScore:    { id: "serviceScore",     label: "Service Score",                                     score: serviceScore,          threshold: 85,  passed: serviceScore >= 85 },
+    verifiedReviews: { id: "verifiedReviews",  label: "Đánh giá xác thực (12 tháng gần nhất)",            score: reviews,               threshold: 50,  passed: reviews >= 50 },
+    dataContrib:     { id: "dataContrib",      label: "Đóng góp dữ liệu Cấp 2 (API/đồng bộ tự động)",    score: dataContrib ? 100 : 0,  threshold: 100, passed: dataContrib },
+    payCrypto:       { id: "payCrypto",        label: "Thanh toán Crypto đã kích hoạt",                   score: payCrypto ? 100 : 0,   threshold: 100, passed: payCrypto },
+    directBook:      { id: "directBook",       label: "Đặt chỗ trực tiếp (Direct Booking) đã kích hoạt", score: directBook ? 100 : 0,  threshold: 100, passed: directBook },
+  };
+}
+
+/** Tier 3 → 4: duy trì Tier 3 + điều kiện chiến lược */
+function cl3to4(dataScore: number, serviceScore: number, reviews: number): SystemChecklist {
+  return {
+    dataScore:        { id: "dataScore",        label: "Data Score (duy trì Tier 3)",          score: dataScore,    threshold: 80, passed: dataScore >= 80 },
+    serviceScore:     { id: "serviceScore",      label: "Service Score (duy trì Tier 3)",       score: serviceScore, threshold: 85, passed: serviceScore >= 85 },
+    verifiedReviews:  { id: "verifiedReviews",   label: "Đánh giá xác thực (duy trì Tier 3)",   score: reviews,     threshold: 50, passed: reviews >= 50 },
+  };
+}
+
+// ─── Compliance items per tier transition ─────────────────────────────────────
+
+const COMPLIANCE_0TO1: ComplianceItem[] = [
+  { id: "kyc-docs",     label: "Cung cấp Giấy phép kinh doanh và CCCD/Hộ chiếu của chủ sở hữu hợp pháp" },
+  { id: "kyc-activate", label: "Phê duyệt kích hoạt (Activated) cơ sở sau khi hoàn tất kiểm tra KYC" },
+];
+
+// Tier 1→2: toàn bộ điều kiện là tự động — không có Admin manual check
+const COMPLIANCE_1TO2: ComplianceItem[] = [];
+
+const COMPLIANCE_2TO3: ComplianceItem[] = [
+  { id: "co-mkt",   label: "Ký kết thành công Thỏa thuận Co-marketing với Visit Vietnam" },
+  { id: "mkt-plan", label: "Nộp bản cam kết Kế hoạch Marketing chung hàng năm (Joint Marketing Plan)" },
+];
+
+const COMPLIANCE_3TO4: ComplianceItem[] = [
+  { id: "industry-lead",  label: "Doanh nghiệp dẫn đầu thị trường trong ngành dọc tương ứng (Top-tier player)" },
+  { id: "strategic-deal", label: "Có thỏa thuận tài trợ hoặc đầu tư chiến lược đặc thù được ký kết" },
+  { id: "invitation",     label: "Tiếp nhận và xác nhận Thư mời đích danh từ Ban quản trị Visit Vietnam" },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function audit(id: string, atOffset: number, actor: string, action: string, track: TierAuditEntry["track"], reason?: string): TierAuditEntry {
   return { id, at: d(atOffset), actor, action, reason, track };
@@ -32,9 +88,12 @@ const f = (id: string, name: string, tier: FacilityRef["currentTier"], vertical:
   id, name, currentTier: tier, vertical, partner, location, dataScore, serviceScore,
 });
 
+// ─── Mock data ────────────────────────────────────────────────────────────────
+
 export const MOCK_TIER_REQUESTS: TierRequest[] = [
   // ── UPGRADE REQUESTS ──────────────────────────────────────────────────────
 
+  // Tier 2 → 3 — dataScore đạt, serviceScore chưa đạt (76 < 85), reviews đạt
   {
     id: "tr-001",
     facility: f("fac-101", "Vinpearl Resort & Spa Nha Trang", 2, "Accommodation", "Vingroup", "Nha Trang, Khánh Hoà", 81, 76),
@@ -43,8 +102,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     submittedBy: "Nguyễn Văn Hùng",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(85, 70, 78, 70, 92, 70, 80, 70),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl2to3(81, 76, 62, { dataContrib: true, payCrypto: false, directBook: true }),
+      complianceItems: COMPLIANCE_2TO3,
     },
     auditHistory: [
       audit("a-001-1", -180, "Hệ thống", "Yêu cầu nâng hạng Tier 2 → 3 được tạo tự động", "organic"),
@@ -52,6 +111,7 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     ],
   },
 
+  // Tier 1 → 2 — dataScore đạt, serviceScore chưa đạt (68 < 75), reviews đạt
   {
     id: "tr-002",
     facility: f("fac-102", "Sun World Đà Nẵng Wonders", 1, "Tour", "Sun Group", "Đà Nẵng", 74, 68),
@@ -60,8 +120,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     submittedBy: "Trần Thị Mai",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(72, 70, 65, 70, 88, 70, 71, 70),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl1to2(74, 68, 28, { dataContrib: true, payQR: true, payIntCard: false, streakDays: 5 }),
+      complianceItems: COMPLIANCE_1TO2,
     },
     auditHistory: [
       audit("a-002-1", -48, "Hệ thống", "Yêu cầu nâng hạng Tier 1 → 2 được tạo tự động", "organic"),
@@ -69,6 +129,7 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     ],
   },
 
+  // Tier 3 → 4 — deferred, by invitation only
   {
     id: "tr-003",
     facility: f("fac-103", "FLC Luxury Hotel Quy Nhơn", 3, "Accommodation", "FLC Group", "Quy Nhơn, Bình Định", 88, 79),
@@ -78,8 +139,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     deferReason: "Hồ sơ pháp lý đang trong quá trình xác minh tại Sở VHTT. Cần bổ sung giấy phép kinh doanh lưu trú mới nhất và biên bản kiểm tra PCCC. Vui lòng cung cấp trong vòng 7 ngày làm việc.",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(90, 80, 82, 80, 95, 80, 88, 80),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl3to4(88, 79, 73),
+      complianceItems: COMPLIANCE_3TO4,
     },
     auditHistory: [
       audit("a-003-1", -300, "Hệ thống", "Yêu cầu nâng hạng Tier 3 → 4 được tạo tự động", "organic"),
@@ -88,6 +149,7 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     ],
   },
 
+  // Tier 0 → 1 — tất cả chỉ số đạt
   {
     id: "tr-004",
     facility: f("fac-104", "Boutique Hotel Phố Cổ Hội An", 0, "Accommodation", "Độc lập", "Hội An, Quảng Nam", 58, 62),
@@ -96,8 +158,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     submittedBy: "Võ Thị Lan",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(60, 60, 55, 60, 70, 60, 58, 60),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl0to1(58, 62, 8),
+      complianceItems: COMPLIANCE_0TO1,
     },
     auditHistory: [
       audit("a-004-1", -120, "Hệ thống", "Yêu cầu nâng hạng Tier 0 → 1 được tạo tự động", "organic"),
@@ -105,6 +167,7 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     ],
   },
 
+  // Tier 1 → 2 — serviceScore chưa đạt (71 < 75)
   {
     id: "tr-005",
     facility: f("fac-105", "Resort Biển Xanh Phú Quốc", 1, "Accommodation", "Phú Quốc Resort JSC", "Phú Quốc, Kiên Giang", 77, 71),
@@ -113,8 +176,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     submittedBy: "Đinh Xuân Phú",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(75, 70, 80, 70, 62, 70, 74, 70),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl1to2(77, 71, 31, { dataContrib: true, payQR: true, payIntCard: true, streakDays: 3 }),
+      complianceItems: COMPLIANCE_1TO2,
     },
     auditHistory: [
       audit("a-005-1", -72, "Hệ thống", "Yêu cầu nâng hạng Tier 1 → 2 được tạo tự động", "organic"),
@@ -122,6 +185,7 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     ],
   },
 
+  // Tier 1 → 2 — dataScore chưa đạt (65 < 70), serviceScore chưa đạt (70 < 75)
   {
     id: "tr-006",
     facility: f("fac-106", "Nhà hàng Sóng Biển Đà Nẵng", 1, "F&B", "Sóng Biển F&B", "Đà Nẵng", 65, 70),
@@ -130,8 +194,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     submittedBy: "Ngô Thị Hương",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(68, 65, 72, 65, 80, 65, 66, 65),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl1to2(65, 70, 30, { dataContrib: false, payQR: true, payIntCard: false, streakDays: 0 }),
+      complianceItems: COMPLIANCE_1TO2,
     },
     auditHistory: [
       audit("a-006-1", -200, "Hệ thống", "Yêu cầu nâng hạng Tier 1 → 2 được tạo tự động", "organic"),
@@ -139,6 +203,7 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     ],
   },
 
+  // Tier 1 → 2 — serviceScore chưa đạt (73 < 75)
   {
     id: "tr-007",
     facility: f("fac-107", "Vietravel Đà Lạt Experience", 1, "Tour", "Vietravel", "Đà Lạt, Lâm Đồng", 70, 73),
@@ -147,8 +212,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     submittedBy: "Hoàng Đức Thịnh",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(73, 65, 70, 65, 85, 65, 68, 65),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl1to2(70, 73, 29, { dataContrib: true, payQR: true, payIntCard: true, streakDays: 4 }),
+      complianceItems: COMPLIANCE_1TO2,
     },
     auditHistory: [
       audit("a-007-1", -160, "Hệ thống", "Yêu cầu nâng hạng Tier 1 → 2 tự động", "organic"),
@@ -156,6 +221,7 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     ],
   },
 
+  // Tier 3 → 4 — deferred, serviceScore chưa đạt (85 biên), reviews đạt
   {
     id: "tr-008",
     facility: f("fac-108", "BRG Golf Resort Đà Lạt", 3, "Accommodation", "BRG Group", "Đà Lạt, Lâm Đồng", 91, 85),
@@ -165,8 +231,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     deferReason: "Yêu cầu bổ sung 3 hạng mục: (1) Kết quả đánh giá sao quốc tế mới nhất, (2) Hợp đồng dịch vụ golf quốc tế, (3) Xác nhận đội ngũ nhân sự có chứng chỉ PGA. Thời hạn bổ sung: 14 ngày làm việc kể từ ngày nhận thông báo này.",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(88, 80, 90, 80, 78, 80, 85, 80),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl3to4(91, 85, 88),
+      complianceItems: COMPLIANCE_3TO4,
     },
     auditHistory: [
       audit("a-008-1", -400, "Hệ thống", "Yêu cầu nâng hạng Tier 3 → 4 tự động", "organic"),
@@ -176,6 +242,7 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     ],
   },
 
+  // Tier 0 → 1 — deferred, reviews chưa đạt (3 < 5)
   {
     id: "tr-009",
     facility: f("fac-109", "Khách sạn Ngọc Trai Sapa", 0, "Accommodation", "Sapa Tourism JSC", "Sa Pa, Lào Cai", 52, 55),
@@ -185,8 +252,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     deferReason: "Chưa đáp ứng tiêu chí Gallery (ảnh chụp chuyên nghiệp còn thiếu). Yêu cầu cung cấp ít nhất 20 ảnh chụp ngoại thất và nội thất chất lượng cao theo đúng guideline của VSVN. Deadline: 10 ngày làm việc.",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(58, 60, 62, 60, 40, 60, 55, 60),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl0to1(52, 55, 3),
+      complianceItems: COMPLIANCE_0TO1,
     },
     auditHistory: [
       audit("a-009-1", -300, "Hệ thống", "Yêu cầu nâng hạng Tier 0 → 1 tự động", "organic"),
@@ -195,6 +262,7 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     ],
   },
 
+  // Tier 2 → 3 — serviceScore chưa đạt (80 < 85)
   {
     id: "tr-010",
     facility: f("fac-110", "Mường Thanh Luxury Hạ Long", 2, "Accommodation", "Mường Thanh Group", "Hạ Long, Quảng Ninh", 84, 80),
@@ -203,8 +271,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     submittedBy: "Trịnh Văn Đạt",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(86, 70, 84, 70, 90, 70, 82, 70),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl2to3(84, 80, 57, { dataContrib: true, payCrypto: true, directBook: false }),
+      complianceItems: COMPLIANCE_2TO3,
     },
     auditHistory: [
       audit("a-010-1", -48, "Hệ thống", "Yêu cầu nâng hạng Tier 2 → 3 tự động", "organic"),
@@ -212,6 +280,7 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     ],
   },
 
+  // Tier 1 → 2 — serviceScore chưa đạt (65 < 75), reviews chưa đạt (22 < 25)
   {
     id: "tr-011",
     facility: f("fac-111", "Resort Cát Vàng Mũi Né", 1, "Accommodation", "Cát Vàng Resort JSC", "Mũi Né, Bình Thuận", 71, 65),
@@ -220,8 +289,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     submittedBy: "Bùi Thị Thanh",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(74, 70, 68, 70, 77, 70, 72, 70),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl1to2(71, 65, 22, { dataContrib: false, payQR: false, payIntCard: false, streakDays: 0 }),
+      complianceItems: COMPLIANCE_1TO2,
     },
     auditHistory: [
       audit("a-011-1", -120, "Hệ thống", "Yêu cầu nâng hạng Tier 1 → 2 tự động", "organic"),
@@ -229,6 +298,7 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     ],
   },
 
+  // Tier 0 → 1 — tất cả đạt
   {
     id: "tr-012",
     facility: f("fac-112", "Tour Thiên Minh Hội An Heritage", 0, "Tour", "Thiên Minh Group", "Hội An, Quảng Nam", 60, 67),
@@ -237,8 +307,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     submittedBy: "Lý Văn Minh",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(62, 60, 65, 60, 71, 60, 60, 60),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl0to1(60, 67, 6),
+      complianceItems: COMPLIANCE_0TO1,
     },
     auditHistory: [
       audit("a-012-1", -60, "Hệ thống", "Yêu cầu nâng hạng Tier 0 → 1 tự động", "organic"),
@@ -408,6 +478,7 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     ],
   },
 
+  // Tier 0 → 1 — deferred, reviews chưa đạt (4 < 5)
   {
     id: "tr-020",
     facility: f("fac-120", "Homestay Bình Minh Hội An", 0, "Accommodation", "Độc lập", "Hội An, Quảng Nam", 50, 58),
@@ -417,8 +488,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     deferReason: "SKU danh mục phòng chưa đáp ứng mức tối thiểu (cần tối thiểu 5 loại phòng có mô tả đầy đủ và ảnh chụp). Hiện tại chỉ có 2 loại phòng. Yêu cầu bổ sung danh mục trong 10 ngày làm việc.",
     details: {
       kind: "upgrade",
-      systemChecklist: checklist(55, 60, 60, 60, 52, 60, 35, 60),
-      complianceItems: COMPLIANCE,
+      systemChecklist: cl0to1(50, 58, 4),
+      complianceItems: COMPLIANCE_0TO1,
     },
     auditHistory: [
       audit("a-020-1", -336, "Hệ thống", "Yêu cầu nâng hạng Tier 0 → 1 tự động", "organic"),

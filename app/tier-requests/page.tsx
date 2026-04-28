@@ -1,24 +1,26 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Search, Gift, Inbox, Trophy, Filter } from "lucide-react";
+import { Search, Gift, Inbox, Trophy, ChevronLeft, ChevronRight } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { RequestDrawer } from "@/components/tier-requests/RequestDrawer";
 import { GrantModal } from "@/components/tier-requests/GrantModal";
 import { AuditTrailDrawer } from "@/components/tier-requests/AuditTrailDrawer";
-import { TierJourney } from "@/components/tier-requests/TierJourney";
 import { SlaCountdown } from "@/components/tier-requests/SlaCountdown";
 import { TierBadge } from "@/components/tier-requests/TierBadge";
 import { useTierRequests } from "@/lib/store/tier-requests-store";
-import type { TierRequest, Vertical, TierRequestStatus } from "@/lib/tier-requests/types";
+import type { TierRequest, Vertical, TierRequestStatus, TierLevel } from "@/lib/tier-requests/types";
 import { cn } from "@/lib/cn";
 
 type TabKind = "upgrade" | "sync";
+
+const PAGE_SIZE = 25;
 
 const VERTICALS: Vertical[] = ["Accommodation", "F&B", "Tour", "Retail"];
 const VERTICAL_LABEL: Record<Vertical, string> = {
   Accommodation: "Lưu trú", "F&B": "Ẩm thực", Tour: "Tour", Retail: "Bán lẻ",
 };
+const TIER_LEVELS: TierLevel[] = [0, 1, 2, 3, 4];
 
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -46,10 +48,26 @@ export default function TierRequestsPage() {
   const clearAction = useTierRequests((s) => s.clearApprovedAction);
 
   const [tab, setTab] = useState<TabKind>("upgrade");
-  const [search, setSearch] = useState("");
-  const [vertical, setVertical] = useState<Vertical | "">("");
-  const [status, setStatus] = useState<TierRequestStatus | "">("");
   const [grantOpen, setGrantOpen] = useState(false);
+
+  // ── Per-tab filter state ──────────────────────────────────────────────────────
+  const [uSearch, setUSearch] = useState("");
+  const [uVertical, setUVertical] = useState<Vertical | "">("");
+  const [uStatus, setUStatus] = useState<TierRequestStatus | "">("");
+  const [uFromTier, setUFromTier] = useState<TierLevel | "">("");
+  const [uToTier, setUToTier] = useState<TierLevel | "">("");
+  const [upgradePage, setUpgradePage] = useState(1);
+
+  const [sSearch, setSSearch] = useState("");
+  const [sVertical, setSVertical] = useState<Vertical | "">("");
+  const [sStatus, setSStatus] = useState<TierRequestStatus | "">("");
+  const [sFromTier, setSFromTier] = useState<TierLevel | "">("");
+  const [sToTier, setSToTier] = useState<TierLevel | "">("");
+  const [syncPage, setSyncPage] = useState(1);
+
+  // Reset page khi filter thay đổi
+  useEffect(() => { setUpgradePage(1); }, [uSearch, uVertical, uStatus, uFromTier, uToTier]);
+  useEffect(() => { setSyncPage(1); }, [sSearch, sVertical, sStatus, sFromTier, sToTier]);
 
   // Auto-clear toast
   useEffect(() => {
@@ -63,96 +81,277 @@ export default function TierRequestsPage() {
     [requests, selectedId]
   );
 
-  const filtered = useMemo(() => {
-    return requests.filter((r) => {
-      if (r.details.kind !== tab) return false;
-      if (search && !r.facility.name.toLowerCase().includes(search.toLowerCase()) &&
-          !r.facility.partner.toLowerCase().includes(search.toLowerCase())) return false;
-      if (vertical && r.facility.vertical !== vertical) return false;
-      if (status && r.status !== status) return false;
-      return true;
-    });
-  }, [requests, tab, search, vertical, status]);
+  // ── Per-tab filtered lists ────────────────────────────────────────────────────
+  const upgradeFiltered = useMemo(() =>
+    requests
+      .filter((r) => r.details.kind === "upgrade")
+      .filter((r) => !uSearch ||
+        r.facility.name.toLowerCase().includes(uSearch.toLowerCase()) ||
+        r.facility.partner.toLowerCase().includes(uSearch.toLowerCase()))
+      .filter((r) => !uVertical || r.facility.vertical === uVertical)
+      .filter((r) => !uStatus || r.status === uStatus)
+      .filter((r) => uFromTier === "" || r.fromTier === uFromTier)
+      .filter((r) => uToTier === "" || r.toTier === uToTier),
+    [requests, uSearch, uVertical, uStatus, uFromTier, uToTier]
+  );
 
-  // ── Upgrade tab ─────────────────────────────────────────────────────────────
+  const syncFiltered = useMemo(() =>
+    requests
+      .filter((r) => r.details.kind === "sync")
+      .filter((r) => !sSearch ||
+        r.facility.name.toLowerCase().includes(sSearch.toLowerCase()) ||
+        r.facility.partner.toLowerCase().includes(sSearch.toLowerCase()))
+      .filter((r) => !sVertical || r.facility.vertical === sVertical)
+      .filter((r) => !sStatus || r.status === sStatus)
+      .filter((r) => sFromTier === "" || r.fromTier === sFromTier)
+      .filter((r) => sToTier === "" || r.toTier === sToTier),
+    [requests, sSearch, sVertical, sStatus, sFromTier, sToTier]
+  );
 
-  function UpgradeQueueTab() {
-    const rows = filtered;
+  // ── Paginated slices ──────────────────────────────────────────────────────────
+  const upgradeRows = upgradeFiltered.slice(
+    (upgradePage - 1) * PAGE_SIZE,
+    upgradePage * PAGE_SIZE
+  );
+  const upgradePageCount = Math.max(1, Math.ceil(upgradeFiltered.length / PAGE_SIZE));
 
-    if (rows.length === 0) {
-      return (
-        <div className="flex flex-col items-center py-16 gap-3 text-ink-4">
-          <Inbox size={40} strokeWidth={1.5} />
-          <p className="text-h4 font-semibold text-ink-2">Không có yêu cầu nào</p>
-          <p className="text-body text-ink-3">Tất cả yêu cầu nâng hạng đã được xử lý hoặc chưa có yêu cầu mới.</p>
-        </div>
-      );
-    }
+  const syncRows = syncFiltered.slice(
+    (syncPage - 1) * PAGE_SIZE,
+    syncPage * PAGE_SIZE
+  );
+  const syncPageCount = Math.max(1, Math.ceil(syncFiltered.length / PAGE_SIZE));
 
-    return (
-      <table className="w-full text-body">
-        <thead className="bg-bg-lv2 border-b border-line text-cap-md text-ink-3">
-          <tr>
-            <th className="text-left px-4 py-3 font-medium">Cơ sở</th>
-            <th className="text-left px-4 py-3 font-medium">Lộ trình</th>
-            <th className="text-left px-4 py-3 font-medium">Chỉ số</th>
-            <th className="text-left px-4 py-3 font-medium">Trạng thái</th>
-            <th className="text-left px-4 py-3 font-medium">SLA</th>
-            <th className="px-4 py-3" />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((req) => (
-            <RequestRow key={req.id} req={req} onOpen={() => selectRequest(req.id)} onAudit={() => openAuditDrawer(req.id)} />
-          ))}
-        </tbody>
-      </table>
-    );
-  }
-
-  // ── Sync tab ────────────────────────────────────────────────────────────────
-
-  function SyncQueueTab() {
-    const rows = filtered;
-
-    if (rows.length === 0) {
-      return (
-        <div className="flex flex-col items-center py-16 gap-3 text-ink-4">
-          <Inbox size={40} strokeWidth={1.5} />
-          <p className="text-h4 font-semibold text-ink-2">Không có yêu cầu nào</p>
-          <p className="text-body text-ink-3">Tất cả yêu cầu đồng bộ hạng đã được xử lý hoặc chưa có yêu cầu mới.</p>
-        </div>
-      );
-    }
-
-    return (
-      <table className="w-full text-body">
-        <thead className="bg-bg-lv2 border-b border-line text-cap-md text-ink-3">
-          <tr>
-            <th className="text-left px-4 py-3 font-medium">Cơ sở nguồn</th>
-            <th className="text-left px-4 py-3 font-medium">Hạng mục tiêu</th>
-            <th className="text-left px-4 py-3 font-medium">Số cơ sở đích</th>
-            <th className="text-left px-4 py-3 font-medium">Trạng thái</th>
-            <th className="text-left px-4 py-3 font-medium">SLA</th>
-            <th className="px-4 py-3" />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((req) => (
-            <SyncRow key={req.id} req={req} onOpen={() => selectRequest(req.id)} onAudit={() => openAuditDrawer(req.id)} />
-          ))}
-        </tbody>
-      </table>
-    );
-  }
-
+  // ── Tab counts (total unfiltered) ─────────────────────────────────────────────
   const upgradeCount = requests.filter((r) => r.details.kind === "upgrade").length;
   const syncCount = requests.filter((r) => r.details.kind === "sync").length;
+
+  // ── Upgrade tab ───────────────────────────────────────────────────────────────
+  function UpgradeQueueTab() {
+    return (
+      <div>
+        {/* Filter bar */}
+        <div className="flex items-center gap-2 p-4 border-b border-line">
+          <div className="relative flex-1 max-w-sm">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+            <input
+              value={uSearch}
+              onChange={(e) => setUSearch(e.target.value)}
+              className="input pl-9"
+              placeholder="Tìm cơ sở hoặc đối tác…"
+            />
+          </div>
+          <select
+            value={uVertical}
+            onChange={(e) => setUVertical(e.target.value as Vertical | "")}
+            className="input min-w-[140px] max-w-[180px]"
+          >
+            <option value="">Tất cả vertical</option>
+            {VERTICALS.map((v) => (
+              <option key={v} value={v}>{VERTICAL_LABEL[v]}</option>
+            ))}
+          </select>
+          <select
+            value={uStatus}
+            onChange={(e) => setUStatus(e.target.value as TierRequestStatus | "")}
+            className="input min-w-[140px] max-w-[180px]"
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="pending">Đang chờ</option>
+            <option value="deferred">Trì hoãn</option>
+          </select>
+          <select
+            value={uFromTier}
+            onChange={(e) => setUFromTier(e.target.value === "" ? "" : Number(e.target.value) as TierLevel)}
+            className="input min-w-[140px] max-w-[180px]"
+          >
+            <option value="">Hạng hiện tại</option>
+            {TIER_LEVELS.map((t) => (
+              <option key={t} value={t}>Tier {t}</option>
+            ))}
+          </select>
+          <select
+            value={uToTier}
+            onChange={(e) => setUToTier(e.target.value === "" ? "" : Number(e.target.value) as TierLevel)}
+            className="input min-w-[140px] max-w-[180px]"
+          >
+            <option value="">Hạng yêu cầu</option>
+            {TIER_LEVELS.map((t) => (
+              <option key={t} value={t}>Tier {t}</option>
+            ))}
+          </select>
+        </div>
+
+        {upgradeRows.length === 0 ? (
+          <div className="flex flex-col items-center py-16 gap-3 text-ink-4">
+            <Inbox size={40} strokeWidth={1.5} />
+            <p className="text-h4 font-semibold text-ink-2">Không có yêu cầu nào</p>
+            <p className="text-body text-ink-3">Tất cả yêu cầu nâng hạng đã được xử lý hoặc chưa có yêu cầu mới.</p>
+          </div>
+        ) : (
+          <table className="w-full text-body">
+            <thead className="bg-bg-lv2 border-b border-line text-cap-md text-ink-3">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium">Cơ sở</th>
+                <th className="text-left px-4 py-3 font-medium">Đối tác</th>
+                <th className="text-left px-4 py-3 font-medium">Hạng hiện tại</th>
+                <th className="text-left px-4 py-3 font-medium">Hạng yêu cầu</th>
+                <th className="text-left px-4 py-3 font-medium">Chỉ số</th>
+                <th className="text-left px-4 py-3 font-medium">Trạng thái</th>
+                <th className="text-left px-4 py-3 font-medium">SLA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {upgradeRows.map((req) => (
+                <RequestRow key={req.id} req={req} onOpen={() => selectRequest(req.id)} onAudit={() => openAuditDrawer(req.id)} />
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {/* Pagination */}
+        {upgradePageCount > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-line bg-bg-lv1">
+            <span className="text-cap-md text-ink-3">
+              {(upgradePage - 1) * PAGE_SIZE + 1}–{Math.min(upgradePage * PAGE_SIZE, upgradeFiltered.length)} / {upgradeFiltered.length} yêu cầu
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                disabled={upgradePage === 1}
+                onClick={() => setUpgradePage((p) => p - 1)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-line text-ink-3 hover:bg-bg-lv2 disabled:opacity-40 transition-colors"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <span className="text-cap-md text-ink-2 px-2 tabular-nums">{upgradePage} / {upgradePageCount}</span>
+              <button
+                disabled={upgradePage === upgradePageCount}
+                onClick={() => setUpgradePage((p) => p + 1)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-line text-ink-3 hover:bg-bg-lv2 disabled:opacity-40 transition-colors"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Sync tab ──────────────────────────────────────────────────────────────────
+  function SyncQueueTab() {
+    return (
+      <div>
+        {/* Filter bar */}
+        <div className="flex items-center gap-2 p-4 border-b border-line">
+          <div className="relative flex-1 max-w-sm">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+            <input
+              value={sSearch}
+              onChange={(e) => setSSearch(e.target.value)}
+              className="input pl-9"
+              placeholder="Tìm cơ sở hoặc đối tác…"
+            />
+          </div>
+          <select
+            value={sVertical}
+            onChange={(e) => setSVertical(e.target.value as Vertical | "")}
+            className="input min-w-[140px] max-w-[180px]"
+          >
+            <option value="">Tất cả vertical</option>
+            {VERTICALS.map((v) => (
+              <option key={v} value={v}>{VERTICAL_LABEL[v]}</option>
+            ))}
+          </select>
+          <select
+            value={sStatus}
+            onChange={(e) => setSStatus(e.target.value as TierRequestStatus | "")}
+            className="input min-w-[140px] max-w-[180px]"
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="pending">Đang chờ</option>
+            <option value="deferred">Trì hoãn</option>
+          </select>
+          <select
+            value={sFromTier}
+            onChange={(e) => setSFromTier(e.target.value === "" ? "" : Number(e.target.value) as TierLevel)}
+            className="input min-w-[140px] max-w-[180px]"
+          >
+            <option value="">Hạng hiện tại</option>
+            {TIER_LEVELS.map((t) => (
+              <option key={t} value={t}>Tier {t}</option>
+            ))}
+          </select>
+          <select
+            value={sToTier}
+            onChange={(e) => setSToTier(e.target.value === "" ? "" : Number(e.target.value) as TierLevel)}
+            className="input min-w-[140px] max-w-[180px]"
+          >
+            <option value="">Hạng yêu cầu</option>
+            {TIER_LEVELS.map((t) => (
+              <option key={t} value={t}>Tier {t}</option>
+            ))}
+          </select>
+        </div>
+
+        {syncRows.length === 0 ? (
+          <div className="flex flex-col items-center py-16 gap-3 text-ink-4">
+            <Inbox size={40} strokeWidth={1.5} />
+            <p className="text-h4 font-semibold text-ink-2">Không có yêu cầu nào</p>
+            <p className="text-body text-ink-3">Tất cả yêu cầu đồng bộ hạng đã được xử lý hoặc chưa có yêu cầu mới.</p>
+          </div>
+        ) : (
+          <table className="w-full text-body">
+            <thead className="bg-bg-lv2 border-b border-line text-cap-md text-ink-3">
+              <tr>
+                <th className="text-left px-4 py-3 font-medium">Cơ sở nguồn</th>
+                <th className="text-left px-4 py-3 font-medium">Đối tác</th>
+                <th className="text-left px-4 py-3 font-medium">Hạng mục tiêu</th>
+                <th className="text-left px-4 py-3 font-medium">Số cơ sở đích</th>
+                <th className="text-left px-4 py-3 font-medium">Trạng thái</th>
+                <th className="text-left px-4 py-3 font-medium">SLA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {syncRows.map((req) => (
+                <SyncRow key={req.id} req={req} onOpen={() => selectRequest(req.id)} onAudit={() => openAuditDrawer(req.id)} />
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {/* Pagination */}
+        {syncPageCount > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-line bg-bg-lv1">
+            <span className="text-cap-md text-ink-3">
+              {(syncPage - 1) * PAGE_SIZE + 1}–{Math.min(syncPage * PAGE_SIZE, syncFiltered.length)} / {syncFiltered.length} yêu cầu
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                disabled={syncPage === 1}
+                onClick={() => setSyncPage((p) => p - 1)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-line text-ink-3 hover:bg-bg-lv2 disabled:opacity-40 transition-colors"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <span className="text-cap-md text-ink-2 px-2 tabular-nums">{syncPage} / {syncPageCount}</span>
+              <button
+                disabled={syncPage === syncPageCount}
+                onClick={() => setSyncPage((p) => p + 1)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-line text-ink-3 hover:bg-bg-lv2 disabled:opacity-40 transition-colors"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <>
       <Header
-        title="Yêu cầu nâng hạng"
+        title="Yêu cầu xếp hạng"
         actions={
           <button
             onClick={() => setGrantOpen(true)}
@@ -163,42 +362,7 @@ export default function TierRequestsPage() {
         }
       />
 
-      <div className="flex-1 overflow-y-auto p-6 scrollbar-thin space-y-4">
-        {/* Filter bar */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-4" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="input pl-8 w-full"
-              placeholder="Tìm cơ sở hoặc đối tác…"
-            />
-          </div>
-          <div className="flex items-center gap-1.5 text-ink-3">
-            <Filter size={14} />
-          </div>
-          <select
-            value={vertical}
-            onChange={(e) => setVertical(e.target.value as Vertical | "")}
-            className="input min-w-[140px]"
-          >
-            <option value="">Tất cả vertical</option>
-            {VERTICALS.map((v) => (
-              <option key={v} value={v}>{VERTICAL_LABEL[v]}</option>
-            ))}
-          </select>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as TierRequestStatus | "")}
-            className="input min-w-[140px]"
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="pending">Đang chờ</option>
-            <option value="deferred">Trì hoãn</option>
-          </select>
-        </div>
-
+      <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
         {/* Tabs */}
         <div className="card overflow-hidden">
           <div className="flex border-b border-line bg-bg-lv1 px-4 gap-0">
@@ -259,14 +423,15 @@ function RequestRow({ req, onOpen, onAudit }: { req: TierRequest; onOpen: () => 
     >
       <td className="px-4 py-3">
         <div className="font-semibold text-ink-1">{req.facility.name}</div>
-        <div className="text-cap text-ink-3">{req.facility.partner} · {req.facility.location}</div>
       </td>
       <td className="px-4 py-3">
-        <TierJourney
-          from={req.fromTier}
-          to={req.toTier}
-          onClickFrom={(e) => { e.stopPropagation(); onAudit(); }}
-        />
+        <div className="text-body text-ink-1">{req.facility.partner}</div>
+      </td>
+      <td className="px-4 py-3">
+        <TierBadge tier={req.fromTier} onClick={(e) => { e.stopPropagation(); onAudit(); }} />
+      </td>
+      <td className="px-4 py-3">
+        <TierBadge tier={req.toTier} />
       </td>
       <td className="px-4 py-3">
         <div className="flex gap-3">
@@ -291,15 +456,6 @@ function RequestRow({ req, onOpen, onAudit }: { req: TierRequest; onOpen: () => 
       <td className="px-4 py-3">
         <SlaCountdown deadline={req.slaDeadlineAt} />
       </td>
-      <td className="px-4 py-3 text-right">
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onOpen(); }}
-          className="text-cap-md text-info hover:underline"
-        >
-          Xem chi tiết
-        </button>
-      </td>
     </tr>
   );
 }
@@ -313,7 +469,9 @@ function SyncRow({ req, onOpen, onAudit }: { req: TierRequest; onOpen: () => voi
     >
       <td className="px-4 py-3">
         <div className="font-semibold text-ink-1">{req.facility.name}</div>
-        <div className="text-cap text-ink-3">{req.facility.partner} · {req.facility.location}</div>
+      </td>
+      <td className="px-4 py-3">
+        <div className="text-body text-ink-1">{req.facility.partner}</div>
       </td>
       <td className="px-4 py-3">
         <TierBadge tier={req.toTier} onClick={(e) => { e.stopPropagation(); onAudit(); }} />
@@ -332,15 +490,6 @@ function SyncRow({ req, onOpen, onAudit }: { req: TierRequest; onOpen: () => voi
       </td>
       <td className="px-4 py-3">
         <SlaCountdown deadline={req.slaDeadlineAt} />
-      </td>
-      <td className="px-4 py-3 text-right">
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onOpen(); }}
-          className="text-cap-md text-info hover:underline"
-        >
-          Xem chi tiết
-        </button>
       </td>
     </tr>
   );

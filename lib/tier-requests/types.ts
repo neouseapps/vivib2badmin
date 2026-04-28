@@ -23,12 +23,7 @@ export interface TierMetric {
   passed: boolean;
 }
 
-export interface SystemChecklist {
-  facilities: TierMetric;
-  operations: TierMetric;
-  gallery: TierMetric;
-  skus: TierMetric;
-}
+export type SystemChecklist = Record<string, TierMetric>;
 
 export interface ComplianceItem {
   id: string;

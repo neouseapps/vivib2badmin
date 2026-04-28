@@ -27,7 +27,7 @@ const NAV = [
     icon: BookOpen,
     children: [
       { href: "/agents", label: "Danh sách agent" },
-      { href: "/tier-requests", label: "Yêu cầu nâng hạng" },
+      { href: "/tier-requests", label: "Yêu cầu xếp hạng" },
     ],
   },
   { label: "Quản lý phân quyền", icon: Shield, children: [] },
