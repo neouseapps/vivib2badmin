@@ -4,6 +4,7 @@ import { X, RotateCcw, Eye, Clock, CheckCircle } from "lucide-react";
 import { useScoring } from "@/lib/store/scoring-store";
 import type { VersionRecord } from "@/lib/scoring/types";
 import { cn } from "@/lib/cn";
+import { Button, Badge } from "@/components/ui";
 
 interface Props {
   open: boolean;
@@ -40,14 +41,14 @@ function VersionItem({ record, onPreview, onRevert }: {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className={cn(
-              "chip text-[11px] font-semibold",
+            <Badge intention="neutral" className={cn(
+              "text-[11px]",
               isActive ? "bg-success/15 text-success" : "bg-bg-lv3 text-ink-2"
             )}>
               {record.id}
-            </span>
+            </Badge>
             {isActive && (
-              <span className="chip bg-success/10 text-success text-[10px]">Đang hoạt động</span>
+              <Badge intention="neutral" className="bg-success/10 text-success text-[10px]">Đang hoạt động</Badge>
             )}
           </div>
           <p className="text-cap text-ink-3 mt-1">
@@ -56,12 +57,12 @@ function VersionItem({ record, onPreview, onRevert }: {
           <p className="text-cap-md text-ink-2 mt-1.5 leading-relaxed">{record.changeNote}</p>
           {!isActive && (
             <div className="flex items-center gap-2 mt-2.5">
-              <button onClick={onPreview} className="btn-ghost h-7 text-cap flex items-center gap-1">
+              <Button variant="ghost" onClick={onPreview} className="h-7 text-cap">
                 <Eye size={12} />Xem trước
-              </button>
-              <button onClick={onRevert} className="btn-outline h-7 text-cap flex items-center gap-1">
+              </Button>
+              <Button variant="outline" onClick={onRevert} className="h-7 text-cap">
                 <RotateCcw size={12} />Revert về đây
-              </button>
+              </Button>
             </div>
           )}
         </div>

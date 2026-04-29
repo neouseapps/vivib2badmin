@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MapPin, Plus, Pencil, Star, X, Save, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button, Select } from "@/components/ui";
 import type {
   ServiceCard,
   BusinessLocation,
@@ -68,21 +69,17 @@ export function ServiceCardItem({
           {card.type}
         </span>
         {editing ? (
-          <select
-            value={card.active ? "active" : "inactive"}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => { if ((e.target.value === "active") !== card.active) onToggleActive?.(); }}
-            className={cn(
-              "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-medium border-0 cursor-pointer appearance-none pr-3 bg-no-repeat",
-              card.active
-                ? "bg-green-50 text-green-700"
-                : "bg-bg-lv3 text-ink-3"
-            )}
-            style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 24 24' fill='none' stroke='%23808080' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundPosition: "right 2px center" }}
-          >
-            <option value="active">● Active</option>
-            <option value="inactive">● Inactive</option>
-          </select>
+          <div onClick={(e) => e.stopPropagation()}>
+            <Select
+              size="sm"
+              value={card.active ? "active" : "inactive"}
+              onChange={(next) => { if ((next === "active") !== card.active) onToggleActive?.(); }}
+              options={[
+                { value: "active", label: "● Active" },
+                { value: "inactive", label: "● Inactive" },
+              ]}
+            />
+          </div>
         ) : (
           <StatusBadge active={card.active} />
         )}
@@ -318,15 +315,16 @@ export function AddressEditModal({
 
         {/* Footer */}
         <div className="h-[68px] px-5 border-t border-line flex items-center justify-end gap-2 rounded-b-[20px]">
-          <button onClick={onClose} className="btn-outline h-10 px-4">
+          <Button onClick={onClose} variant="outline" className="h-10 px-4">
             Huỷ
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => onSave(fields)}
-            className="btn-primary h-10 px-4"
+            variant="primary"
+            className="h-10 px-4"
           >
             Lưu
-          </button>
+          </Button>
         </div>
       </div>
     </div>

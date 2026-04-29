@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Building2, ArrowRight, MessageSquareText } from "lucide-react";
 import { TierBadge } from "./TierBadge";
 import type { SyncRequest } from "@/lib/tier-requests/types";
+import { Card } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 const DURATION_OPTIONS = [30, 60, 90] as const;
@@ -25,7 +26,7 @@ export function SyncDetails({ details, onChange }: Props) {
       {/* Comparison view */}
       <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-start">
         {/* Source facility */}
-        <div className="card p-4 space-y-2 border-success/30 bg-success-light/20">
+        <Card padding="md" className="space-y-2 border-success/30 bg-success-light/20">
           <div className="flex items-center gap-2 text-cap-md font-semibold text-ink-3 uppercase tracking-wide mb-1">
             <Building2 size={14} /> Cơ sở nguồn
           </div>
@@ -43,7 +44,7 @@ export function SyncDetails({ details, onChange }: Props) {
               <div className="text-cap text-ink-4">Service</div>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Arrow */}
         <div className="flex items-center justify-center pt-16">
@@ -56,11 +57,11 @@ export function SyncDetails({ details, onChange }: Props) {
             <Building2 size={14} /> Cơ sở mục tiêu ({details.targetFacilities.length})
           </div>
           {details.targetFacilities.map((t) => (
-            <div key={t.id} className="card p-3 space-y-1 border-info/20 bg-info-light/20">
+            <Card key={t.id} padding="sm" className="space-y-1 border-info/20 bg-info-light/20">
               <TierBadge tier={0} />
               <p className="text-body font-semibold text-ink-1 leading-snug">{t.name}</p>
               <p className="text-cap-md text-ink-3">{t.location}</p>
-            </div>
+            </Card>
           ))}
         </div>
       </div>

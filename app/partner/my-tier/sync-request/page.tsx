@@ -7,6 +7,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button, Card } from "@/components/ui";
 import { TierBadge } from "@/components/tier-requests/TierBadge";
 import { PARTNER_FACILITIES, FACILITY_TIER_DATA } from "@/lib/mock/partnerTier";
 import type { FacilityRef, TierLevel } from "@/lib/tier-requests/types";
@@ -322,10 +323,10 @@ function EmptyState() {
         Đồng bộ hạng yêu cầu ít nhất <span className="font-semibold">2 cơ sở trở lên</span>.
         Hãy đăng ký thêm cơ sở để sử dụng tính năng này.
       </p>
-      <button className="btn-primary mt-2 flex items-center gap-2">
+      <Button variant="primary" className="mt-2">
         <Building2 size={15} />
         Mở rộng cơ sở mới
-      </button>
+      </Button>
     </div>
   );
 }
@@ -369,7 +370,7 @@ export default function SyncRequestPage() {
 
         <StepIndicator step={step} />
 
-        <div className="card p-6">
+        <Card className="p-6">
           {step === 1 ? (
             <Step1
               sourceId={sourceId}
@@ -385,33 +386,35 @@ export default function SyncRequestPage() {
               setJustification={setJustification}
             />
           )}
-        </div>
+        </Card>
 
         <div className="flex items-center justify-between">
-          <button
+          <Button
             onClick={() => step === 2 ? setStep(1) : router.push("/partner/my-tier")}
-            className="btn-outline flex items-center gap-1"
+            variant="outline"
           >
             <ArrowLeft size={14} />
             {step === 2 ? "Bước trước" : "Hủy"}
-          </button>
+          </Button>
 
           {step === 1 ? (
-            <button
+            <Button
               onClick={() => setStep(2)}
               disabled={!step1Valid}
-              className={cn("btn-primary flex items-center gap-1", !step1Valid && "opacity-40 cursor-not-allowed")}
+              variant="primary"
+              className={cn(!step1Valid && "opacity-40 cursor-not-allowed")}
             >
               Tiếp theo <ArrowRight size={14} />
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               onClick={handleSubmit}
               disabled={!step2Valid || submitting}
-              className={cn("btn-primary flex items-center gap-1", (!step2Valid || submitting) && "opacity-40 cursor-not-allowed")}
+              variant="primary"
+              className={cn((!step2Valid || submitting) && "opacity-40 cursor-not-allowed")}
             >
               {submitting ? "Đang gửi…" : <>Gửi yêu cầu <ArrowRight size={14} /></>}
-            </button>
+            </Button>
           )}
         </div>
     </div>

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { useScoring } from "@/lib/store/scoring-store";
+import { Button, Card } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import type { CallGuideSet } from "@/lib/scoring/types";
 
@@ -234,7 +235,7 @@ function DeleteModal({ name, onConfirm, onCancel }: { name: string; onConfirm: (
           </button>
         </div>
         <div className="px-5 pb-4 flex justify-end gap-2">
-          <button onClick={onCancel} className="btn-outline h-8 text-cap-md">Huỷ</button>
+          <Button variant="outline" onClick={onCancel} className="h-8 text-cap-md">Huỷ</Button>
           <button
             onClick={onConfirm}
             className="h-8 px-4 rounded-lg text-cap-md font-medium bg-red-500 hover:bg-red-600 text-white transition-colors"
@@ -355,7 +356,7 @@ export default function CallGuidePage() {
             )}
           </div>
         ) : (
-          <div className="card overflow-hidden">
+          <Card className="overflow-hidden">
             <table className="w-full text-body">
               <thead>
                 <tr className="bg-bg-lv2/60 border-b border-line">
@@ -434,7 +435,7 @@ export default function CallGuidePage() {
                 })}
               </tbody>
             </table>
-          </div>
+          </Card>
         )}
       </div>
 

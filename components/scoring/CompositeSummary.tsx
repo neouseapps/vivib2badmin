@@ -1,6 +1,7 @@
 "use client";
 import { Zap, Clock, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui";
 import type { TierInfo } from "@/lib/scoring/formulas";
 
 const TIER: Record<1 | 2 | 3 | 4, {
@@ -79,12 +80,13 @@ export function CompositeSummary({ finalScore, leadScore, sourceBoost, tier, all
           <span className="text-cap-md text-ink-3">SLA:</span>
           <span className={cn("text-cap-md font-semibold", s.text)}>{tier.sla}</span>
           {tier.index === 1 && !allLocked && (
-            <button
+            <Button
+              variant="primary"
               onClick={onPrioritize}
-              className="ml-auto btn-primary h-7 text-[11px] px-2.5 bg-amber-500 hover:bg-amber-600 border-amber-500"
+              className="ml-auto h-7 text-[11px] px-2.5 bg-amber-500 hover:bg-amber-600 border-amber-500"
             >
               <Zap size={10} /> Ưu tiên
-            </button>
+            </Button>
           )}
         </div>
       </div>

@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { useScoring } from "@/lib/store/scoring-store";
 import { cn } from "@/lib/cn";
 import type { CallGuideQuestion, CallGuideSet, SurveyConfig } from "@/lib/scoring/types";
+import { Button, Card, Select } from "@/components/ui";
 
 interface Props {
   initial?: CallGuideSet;
@@ -34,16 +35,16 @@ function newQuestion(order: number): CallGuideQuestion {
 
 function CriterionSelect({ value, onChange, survey }: { value?: string; onChange: (v: string) => void; survey: SurveyConfig }) {
   return (
-    <select
+    <Select
+      size="sm"
       value={value ?? ""}
-      onChange={(e) => onChange(e.target.value)}
-      className="h-7 px-2 rounded-lg border border-line bg-white text-cap-md text-ink-2 focus:outline-none focus:ring-1 focus:ring-ink-1"
-    >
-      <option value="">— Không gắn nhãn —</option>
-      {survey.criteria.filter((c) => c.active).map((c) => (
-        <option key={c.id} value={c.id}>{c.name}</option>
-      ))}
-    </select>
+      onChange={(next) => onChange(next)}
+      placeholder="— Không gắn nhãn —"
+      options={[
+        { value: "", label: "— Không gắn nhãn —" },
+        ...survey.criteria.filter((c) => c.active).map((c) => ({ value: c.id, label: c.name })),
+      ]}
+    />
   );
 }
 
@@ -149,21 +150,22 @@ export function CallGuideEditor({ initial, mode }: Props) {
         title={mode === "new" ? "Tạo bộ câu hỏi mới" : "Chỉnh sửa bộ câu hỏi"}
         actions={
           <div className="flex gap-2">
-            <button onClick={() => router.push("/call-guide")} className="btn-outline h-9">Huỷ</button>
-            <button
+            <Button variant="outline" onClick={() => router.push("/call-guide")} className="h-9">Huỷ</Button>
+            <Button
+              variant="primary"
               onClick={handleSave}
               disabled={!canSave}
-              className={cn("btn-primary h-9", !canSave && "opacity-30 cursor-not-allowed")}
+              className={cn("h-9", !canSave && "opacity-30 cursor-not-allowed")}
             >
               Lưu bộ câu hỏi
-            </button>
+            </Button>
           </div>
         }
       />
       <div className="flex-1 overflow-y-auto scrollbar-thin p-6 max-w-2xl mx-auto w-full">
         <div className="space-y-5">
           {/* Metadata */}
-          <div className="card p-5 space-y-4">
+          <Card padding="lg" className="space-y-4">
             <div>
               <label className="text-cap-md text-ink-2 font-medium mb-1 block">Tên bộ câu hỏi <span className="text-red-500">*</span></label>
               <input
@@ -175,18 +177,15 @@ export function CallGuideEditor({ initial, mode }: Props) {
             </div>
             <div>
               <label className="text-cap-md text-ink-2 font-medium mb-1 block">Ngành nghề <span className="text-red-500">*</span></label>
-              <select
+              <Select
+                className="w-full"
                 value={sector}
-                onChange={(e) => setSector(e.target.value as CallGuideSet["sector"])}
-                className="w-full h-9 px-3 rounded-lg border border-line bg-white text-body text-ink-1 focus:outline-none focus:ring-1 focus:ring-ink-1"
-              >
-                <option value="">— Chọn ngành nghề —</option>
-                {SECTOR_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{SECTOR_LABELS[s]}</option>
-                ))}
-              </select>
+                onChange={(next) => setSector(next as CallGuideSet["sector"])}
+                placeholder="— Chọn ngành nghề —"
+                options={SECTOR_OPTIONS.map((s) => ({ value: s, label: SECTOR_LABELS[s] }))}
+              />
             </div>
-          </div>
+          </Card>
 
           {/* Questions grouped */}
           <div>

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { cn } from "@/lib/cn";
+import { Button, Select } from "@/components/ui";
 import { AuditTimeline } from "./AuditTimeline";
 import type { Lead } from "@/lib/scoring/types";
 
@@ -128,16 +129,13 @@ export function LeadInfoPanel({ lead }: Props) {
           <div className="shrink-0 border-t border-line px-4 pt-3 pb-4 space-y-3 bg-bg-lv1">
             <div className="text-body font-medium text-ink-1">Xếp hạng lead</div>
             <div className="space-y-2">
-              <select
+              <Select
+                className="w-full"
                 value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                className="input w-full h-10 text-body"
-              >
-                <option value="">Chọn mức xếp hạng</option>
-                {TIER_OPTIONS.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
+                onChange={(next) => setGrade(next)}
+                placeholder="Chọn mức xếp hạng"
+                options={TIER_OPTIONS.map((t) => ({ value: t, label: t }))}
+              />
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
@@ -146,15 +144,16 @@ export function LeadInfoPanel({ lead }: Props) {
                 className="input w-full resize-none text-body"
               />
             </div>
-            <button
+            <Button
+              variant="primary"
               disabled={!grade}
               className={cn(
-                "btn-primary w-full h-12 text-[16px] font-semibold rounded-[14px]",
+                "w-full h-12 text-[16px] font-semibold rounded-[14px]",
                 !grade && "opacity-30 cursor-not-allowed"
               )}
             >
               Xác nhận kết quả
-            </button>
+            </Button>
           </div>
         </>
       )}

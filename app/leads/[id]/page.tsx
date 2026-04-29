@@ -11,6 +11,7 @@ import { AxisBWorkspace } from "@/components/scoring/AxisBWorkspace";
 import { CompositeSummary } from "@/components/scoring/CompositeSummary";
 import { LeadInfoPanel } from "@/components/scoring/LeadInfoPanel";
 import { CallGuidePanel } from "@/components/scoring/CallGuidePanel";
+import { Button, Badge } from "@/components/ui";
 import { Info, Save, FileText, Plus, Clock } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = { COLD: "Lạnh", CONTACTED: "Đã liên hệ", ACTIVE: "Đang tương tác" };
@@ -48,7 +49,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="text-cap-md text-ink-3">Tên lead</div>
                 <h2 className="text-h3 font-semibold">{lead.name}</h2>
               </div>
-              <button className="btn-outline"><Save size={16} />Lưu thông tin</button>
+              <Button variant="outline"><Save size={16} />Lưu thông tin</Button>
             </div>
 
             {/* Thông tin chung */}
@@ -60,7 +61,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
               <div className="grid grid-cols-[140px_1fr] gap-y-3 gap-x-4 text-body">
                 <div className="text-ink-3">Tên</div><div>{lead.name}</div>
                 <div className="text-ink-3">Trạng thái</div>
-                <div><span className="chip bg-info-light text-info">{STATUS_LABEL[lead.contactStatus]}</span></div>
+                <div><Badge intention="info" style="light">{STATUS_LABEL[lead.contactStatus]}</Badge></div>
                 <div className="text-ink-3">Mã số DN</div><div className="font-mono">0101234567</div>
                 <div className="text-ink-3">Lĩnh vực</div><div>{lead.sector}</div>
                 <div className="text-ink-3">Địa chỉ</div><div>{lead.location}</div>
@@ -78,7 +79,7 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="text-ink-3">Loại</div><div>Chính thống</div>
                 <div className="text-ink-3">Chi tiết nguồn</div><div>Content filled</div>
                 <div className="text-ink-3">Form</div>
-                <div><button className="btn-outline h-8 text-cap-md"><Plus size={12} />Tạo form</button></div>
+                <div><Button variant="outline" className="h-8 text-cap-md"><Plus size={12} />Tạo form</Button></div>
               </div>
             </section>
 
@@ -92,9 +93,9 @@ export default function LeadDetailPage({ params }: { params: Promise<{ id: strin
                   <h3 className="section-title">Đánh giá &amp; xếp hạng tiềm năng</h3>
                 </div>
                 {allLocked && (
-                  <span className="chip bg-bg-lv3 text-ink-3 text-[10px]">
+                  <Badge intention="neutral" className="bg-bg-lv3 text-ink-3 text-[10px]">
                     Điểm số đã được chốt sau khi đối tác lên sàn (Go-live)
-                  </span>
+                  </Badge>
                 )}
               </div>
 

@@ -28,6 +28,7 @@ const NAV = [
     children: [
       { href: "/agents", label: "Danh sách agent" },
       { href: "/tier-requests", label: "Yêu cầu xếp hạng" },
+      { href: "/tier-history", label: "Lịch sử phân hạng" },
     ],
   },
   { label: "Quản lý phân quyền", icon: Shield, children: [] },

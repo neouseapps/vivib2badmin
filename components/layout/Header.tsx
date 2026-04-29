@@ -1,6 +1,7 @@
 "use client";
 import { ChevronLeft, Search, Bell, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui";
 
 export function Header({ title, actions }: { title: string; actions?: React.ReactNode }) {
   const router = useRouter();
@@ -19,8 +20,8 @@ export function Header({ title, actions }: { title: string; actions?: React.Reac
 
 export function CreateTaskButton() {
   return (
-    <button className="btn-primary h-9">
+    <Button variant="primary" className="h-9">
       <Plus size={16}/>Tạo công việc
-    </button>
+    </Button>
   );
 }

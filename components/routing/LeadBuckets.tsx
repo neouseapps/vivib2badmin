@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { RoutedLead } from "@/lib/scoring/types";
+import { Card, Badge } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 interface Props {
@@ -23,7 +24,7 @@ export function LeadBuckets({ routedLeads }: Props) {
   const rows = tab === "pending" ? [...pending, ...overflow] : nurture;
 
   return (
-    <div className="card overflow-hidden">
+    <Card className="overflow-hidden">
       {/* Tab bar */}
       <div className="flex items-center border-b border-line px-4 bg-bg-lv1">
         <TabBtn
@@ -41,9 +42,9 @@ export function LeadBuckets({ routedLeads }: Props) {
           Marketing Nurture
         </TabBtn>
         {overflow.length > 0 && (
-          <span className="ml-auto chip bg-warn-light text-warn-text">
+          <Badge intention="warning" style="light" className="ml-auto">
             {overflow.length} chờ hạn mức
-          </span>
+          </Badge>
         )}
       </div>
 
@@ -93,7 +94,7 @@ export function LeadBuckets({ routedLeads }: Props) {
                     {lead.assignedTo}
                   </td>
                   <td className="px-4 py-2.5 text-center">
-                    <span className={cn("chip", s.cls)}>{s.label}</span>
+                    <Badge intention="neutral" className={s.cls}>{s.label}</Badge>
                   </td>
                 </tr>
               );
@@ -101,7 +102,7 @@ export function LeadBuckets({ routedLeads }: Props) {
           </tbody>
         </table>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -127,14 +128,9 @@ function TabBtn({
       )}
     >
       {children}
-      <span
-        className={cn(
-          "chip text-cap",
-          active ? "bg-ink-1 text-white" : "bg-bg-lv3 text-ink-3"
-        )}
-      >
+      <Badge intention="neutral" size="sm" className={active ? "bg-ink-1 text-white" : "bg-bg-lv3 text-ink-3"}>
         {count}
-      </span>
+      </Badge>
     </button>
   );
 }

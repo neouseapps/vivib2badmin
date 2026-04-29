@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { MOCK_AGENTS } from "@/lib/mock/agents";
 import { Agent } from "@/lib/scoring/types";
 import { cn } from "@/lib/cn";
+import { Badge, Card } from "@/components/ui";
 
 const PAGE_SIZE = 25;
 
@@ -85,7 +86,7 @@ export default function AgentsPage() {
           </div>
         </div>
 
-        <div className="card overflow-hidden">
+        <Card className="overflow-hidden">
           <table className="w-full text-body">
             <thead className="bg-bg-lv2 border-b border-line text-cap-md text-ink-3">
               <tr>
@@ -108,9 +109,9 @@ export default function AgentsPage() {
                   <td className="px-4 py-3 text-ink-2">{agent.partner}</td>
                   <td className="px-4 py-3 text-ink-2">{agent.email}</td>
                   <td className="px-4 py-3">
-                    <span className={cn("chip", PERMISSION_STYLE[agent.permission])}>
+                    <Badge intention="neutral" className={PERMISSION_STYLE[agent.permission]}>
                       {agent.permission}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="px-4 py-3 text-ink-2">{agent.source}</td>
                   <td className="px-4 py-3">
@@ -165,7 +166,7 @@ export default function AgentsPage() {
               </button>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Detail Drawer */}

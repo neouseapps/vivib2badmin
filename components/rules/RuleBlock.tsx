@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { ConditionItem, LogicalConnector, RuleBlock as RuleT } from "@/lib/scoring/types";
+import { Card, Badge } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { GripVertical, Copy, Trash2, ChevronDown, Power, MoreHorizontal } from "lucide-react";
 import { ConditionBuilder } from "./ConditionBuilder";
@@ -42,7 +43,7 @@ export function RuleBlock({ rule, onChange, onDuplicate, onDelete, color, dragHa
   const hasSummary = conditionCount > 0 || rule.formula;
 
   return (
-    <div className={cn("card overflow-hidden", !rule.active && "opacity-60")}>
+    <Card className={cn("overflow-hidden", !rule.active && "opacity-60")}>
       {/* ── Header ── */}
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-line bg-bg-lv2/50">
         <button
@@ -114,16 +115,16 @@ export function RuleBlock({ rule, onChange, onDuplicate, onDelete, color, dragHa
       {collapsed && hasSummary && (
         <div className="px-4 py-2 flex items-center gap-3 flex-wrap">
           {conditionCount > 0 && (
-            <span className="chip bg-bg-lv3 text-ink-3">
+            <Badge intention="neutral" className="bg-bg-lv3 text-ink-3">
               {conditionCount} điều kiện · {rule.conditionConnector ?? "AND"}
-            </span>
+            </Badge>
           )}
           {rule.formula && (
             <span className="text-cap-md font-mono text-ink-3 truncate max-w-[260px]">{rule.formula}</span>
           )}
-          <span className="chip bg-bg-lv3 text-ink-4 ml-auto">
+          <Badge intention="neutral" className="bg-bg-lv3 text-ink-4 ml-auto">
             {rule.minScore}–{rule.maxScore}
-          </span>
+          </Badge>
         </div>
       )}
 
@@ -192,6 +193,6 @@ export function RuleBlock({ rule, onChange, onDuplicate, onDelete, color, dragHa
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

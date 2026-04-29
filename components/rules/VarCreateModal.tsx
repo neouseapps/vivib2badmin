@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { CustomVariable, VarType } from "@/lib/scoring/types";
 import { useScoring } from "@/lib/store/scoring-store";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui";
 import { X, Plus, Trash2 } from "lucide-react";
 
 interface Props {
@@ -152,10 +153,10 @@ export function VarCreateModal({ onClose }: Props) {
 
         {/* Footer */}
         <div className="flex justify-end gap-2 px-5 py-3 border-t border-line bg-bg-lv2/40">
-          <button onClick={onClose} className="btn-outline">Hủy</button>
-          <button onClick={handleSave} disabled={!name.trim() || nameInvalid || nameDup} className="btn-primary disabled:opacity-50">
+          <Button variant="outline" onClick={onClose}>Hủy</Button>
+          <Button variant="primary" onClick={handleSave} disabled={!name.trim() || nameInvalid || nameDup}>
             Lưu biến
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, X } from "lucide-react";
 import type { TierRequest } from "@/lib/tier-requests/types";
+import { Button } from "@/components/ui";
 
 interface Props {
   open: boolean;
@@ -79,13 +80,14 @@ export function ApproveModal({ open, request, onClose, onConfirm }: Props) {
 
           {/* Footer */}
           <div className="flex justify-end gap-2 px-5 py-3 border-t border-line bg-bg-lv2/40 rounded-b-xl">
-            <button onClick={onClose} className="btn-outline" disabled={isSubmitting}>
+            <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
               Huỷ
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="primary"
               onClick={handleConfirm}
               disabled={isSubmitting}
-              className="btn-primary flex items-center gap-2 min-w-[120px] justify-center disabled:opacity-70"
+              className="min-w-[120px] justify-center"
             >
               {isSubmitting ? (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -93,7 +95,7 @@ export function ApproveModal({ open, request, onClose, onConfirm }: Props) {
                 <CheckCircle2 size={14} />
               )}
               {isSubmitting ? "Đang xử lý…" : "Xác nhận"}
-            </button>
+            </Button>
           </div>
         </motion.div>
       </AnimatePresence>

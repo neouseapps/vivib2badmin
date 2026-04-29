@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useScoring, getLeadDerived } from "@/lib/store/scoring-store";
 import { GaugeChart } from "@/components/scoring/GaugeChart";
 import { socialGravity, walletShare, ecosystemProximity } from "@/lib/scoring/formulas";
+import { Card, Select } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { Cpu, CheckCircle2, MinusCircle } from "lucide-react";
 
@@ -29,7 +30,7 @@ export function SimulationPanel() {
   const qualified = derived ? derived.axisAEff >= 70 : false;
 
   return (
-    <div className="card overflow-hidden">
+    <Card className="overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-line bg-bg-lv2/60">
         <Cpu size={14} className="text-info" />
@@ -41,17 +42,12 @@ export function SimulationPanel() {
 
       <div className="p-4 space-y-4">
         {/* Lead selector */}
-        <select
+        <Select
+          size="sm"
           value={id}
-          onChange={(e) => setId(e.target.value)}
-          className="input text-cap-md h-8"
-        >
-          {leads.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.name}
-            </option>
-          ))}
-        </select>
+          onChange={(next) => setId(next)}
+          options={leads.map((l) => ({ value: l.id, label: l.name }))}
+        />
 
         {derived && lead && (
           <>
@@ -138,7 +134,7 @@ export function SimulationPanel() {
           </>
         )}
       </div>
-    </div>
+    </Card>
   );
 }
 

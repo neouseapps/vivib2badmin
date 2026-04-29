@@ -9,6 +9,7 @@ import {
   Sprout, Gift, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button, Badge, Card, Select } from "@/components/ui";
 import { TierBadge } from "@/components/tier-requests/TierBadge";
 import { SlaCountdown } from "@/components/tier-requests/SlaCountdown";
 import {
@@ -101,7 +102,7 @@ const TIER_OPTIONS: { value: number | "all"; label: string }[] = [
 
 function BusinessProfileHeader() {
   return (
-    <div className="card flex items-center gap-5 p-5">
+    <Card padding="lg" className="flex items-center gap-5">
       <div className="w-14 h-14 rounded-xl bg-brand/10 flex items-center justify-center shrink-0">
         <span className="text-brand text-h3 font-bold">M</span>
       </div>
@@ -109,9 +110,9 @@ function BusinessProfileHeader() {
         <div className="flex items-center gap-2 mb-1">
           <h2 className="text-lg font-bold text-ink-1 truncate">{COMPANY.name}</h2>
           {COMPANY.verified && (
-            <span className="chip bg-success-light text-success flex items-center gap-1">
+            <Badge intention="success" style="light">
               <CheckCircle2 size={11} /> Đã xác thực
-            </span>
+            </Badge>
           )}
         </div>
         <div className="flex items-center gap-4 text-cap-md text-ink-3 flex-wrap">
@@ -128,7 +129,7 @@ function BusinessProfileHeader() {
       >
         Xem chi tiết hồ sơ <ExternalLink size={11} />
       </Link>
-    </div>
+    </Card>
   );
 }
 
@@ -223,7 +224,7 @@ function TierTableView({
   }
 
   return (
-    <div className="card overflow-hidden">
+    <Card className="overflow-hidden">
       {/* Filter row */}
       <div className="px-5 py-3 border-b border-line flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2 input flex-1 min-w-[200px]">
@@ -235,30 +236,33 @@ function TierTableView({
             className="flex-1 bg-transparent outline-none text-body text-ink-1 placeholder:text-ink-4"
           />
         </div>
-        <select
+        <Select
+          className="w-auto min-w-[160px]"
+          size="sm"
           value={locFilter}
-          onChange={(e) => setLocFilter(e.target.value)}
-          className="input w-auto min-w-[160px]"
-        >
-          <option value="all">Tất cả địa điểm</option>
-          {allLocations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-        </select>
-        <select
+          onChange={(next) => setLocFilter(next)}
+          options={[
+            { value: "all", label: "Tất cả địa điểm" },
+            ...allLocations.map((loc) => ({ value: loc, label: loc })),
+          ]}
+        />
+        <Select
+          className="w-auto min-w-[140px]"
+          size="sm"
           value={String(tierFilter)}
-          onChange={(e) => setTierFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
-          className="input w-auto min-w-[140px]"
-        >
-          {TIER_OPTIONS.map(o => <option key={o.value} value={String(o.value)}>{o.label}</option>)}
-        </select>
+          onChange={(next) => setTierFilter(next === "all" ? "all" : Number(next))}
+          options={TIER_OPTIONS.map((o) => ({ value: String(o.value), label: o.label }))}
+        />
         {selected.size > 0 && (
           <div className="flex items-center gap-2 ml-auto">
             <span className="text-cap-md text-ink-3">Đã chọn <span className="font-semibold text-ink-1">{selected.size}</span> dịch vụ</span>
-            <button
+            <Button
               onClick={() => onSyncSelected(new Set(selected))}
-              className="btn-primary text-cap-md flex items-center gap-1"
+              variant="primary"
+              className="text-cap-md"
             >
               <Link2 size={12} /> Đồng bộ hạng
-            </button>
+            </Button>
             <button
               onClick={() => setSelected(new Set())}
               className="text-ink-3 hover:text-ink-1 transition-colors"
@@ -324,11 +328,11 @@ function TierTableView({
                   <td className="px-4 py-3 text-center"><TierBadge tier={f.currentTier} /></td>
                   <td className="px-4 py-3">
                     {data?.synchronized_tier !== null && data?.synchronized_tier !== undefined ? (
-                      <span className="chip bg-info-light text-info">Đồng bộ</span>
+                      <Badge intention="info" style="light">Đồng bộ</Badge>
                     ) : active ? (
-                      <span className={cn("chip", STATUS_META[active.status].chipClass)}>
+                      <Badge intention="neutral" className={STATUS_META[active.status].chipClass}>
                         {STATUS_META[active.status].label}
-                      </span>
+                      </Badge>
                     ) : (
                       <span className="text-cap-md text-ink-4">—</span>
                     )}
@@ -364,7 +368,7 @@ function TierTableView({
           )}
         </tbody>
       </table>
-    </div>
+    </Card>
   );
 }
 
@@ -545,9 +549,9 @@ function DrawerHistoryRow({ item }: { item: PartnerHistoryItem }) {
             </button>
           )}
         </div>
-        <span className={cn("chip shrink-0 mt-0.5", STATUS_META[item.status].chipClass)}>
+        <Badge intention="neutral" className={cn("shrink-0 mt-0.5", STATUS_META[item.status].chipClass)}>
           {STATUS_META[item.status].label}
-        </span>
+        </Badge>
       </div>
 
       {/* Expanded targets */}
@@ -853,9 +857,9 @@ export default function ServicesV2Page() {
               );
             })}
           </nav>
-          <button className="btn-primary text-cap-md flex items-center gap-1 mb-2">
+          <Button variant="primary" className="text-cap-md mb-2">
             <Plus size={13} /> Thêm dịch vụ
-          </button>
+          </Button>
         </div>
 
         {/* Tab content */}

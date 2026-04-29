@@ -18,6 +18,7 @@ import {
   type PartnerHistoryItem,
 } from "@/lib/mock/partnerTier";
 import { usePartnerTierStore } from "@/lib/store/partner-tier-store";
+import { Badge } from "@/components/ui";
 
 // ─── Status meta ──────────────────────────────────────────────────────────────
 
@@ -175,16 +176,16 @@ function HistoryInner() {
 
       {/* Summary */}
       <div className="flex items-center gap-2">
-        <span className="chip bg-bg-lv3 text-ink-2">{items.length} yêu cầu</span>
+        <Badge intention="neutral" className="bg-bg-lv3 text-ink-2">{items.length} yêu cầu</Badge>
         {pending > 0 && (
-          <span className="chip bg-info-light text-info flex items-center gap-1">
+          <Badge intention="info" style="light">
             <Clock size={11} />{pending} đang chờ
-          </span>
+          </Badge>
         )}
         {deferred > 0 && (
-          <span className="chip bg-warn-light text-warn-text flex items-center gap-1">
+          <Badge intention="warning" style="light">
             <AlertCircle size={11} />{deferred} cần bổ sung
-          </span>
+          </Badge>
         )}
       </div>
 

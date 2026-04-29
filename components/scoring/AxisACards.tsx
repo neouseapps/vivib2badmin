@@ -1,6 +1,7 @@
 "use client";
 import { Zap } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Badge } from "@/components/ui";
 
 interface Props {
   axisABase: number;
@@ -20,9 +21,9 @@ export function AxisACards({ axisABase, campaignBoost, locked }: Props) {
           </div>
           <div className="flex-1" />
           {campaignBoost > 0 && (
-            <span className="chip bg-warn-light text-warn-text shrink-0">
+            <Badge intention="warning" style="light" className="shrink-0">
               <Zap size={10} /> +{campaignBoost}
-            </span>
+            </Badge>
           )}
         </div>
       </div>

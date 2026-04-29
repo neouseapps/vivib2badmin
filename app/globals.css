@@ -4,7 +4,46 @@
 
 @layer base {
   :root {
-    --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+    /* fonts */
+    --font-sans:    "Inter", system-ui, -apple-system, sans-serif;
+    --font-display: "Inter Display", "Inter", system-ui, sans-serif;
+    --font-mono:    "Geist Mono", monospace;
+
+    /* background */
+    --color-bg-lv1: #ffffff;
+    --color-bg-lv2: #f7f7f7;
+    --color-bg-lv3: #f2f2f2;
+    --color-bg-lv4: #ebebeb;
+
+    /* text */
+    --color-text-lv1: #212121;
+    --color-text-lv2: #454545;
+    --color-text-lv3: #808080;
+    --color-text-lv4: #a3a3a3;
+
+    /* border */
+    --color-border-default: #ebebeb;
+    --color-border-strong:  #e3e3e3;
+    --color-border-input:   #d7d7d7;
+
+    /* brand */
+    --color-brand:       #e6000f;
+    --color-brand-hover: #be0018;
+    --color-brand-light: #fff5f8;
+
+    /* status */
+    --color-info:          #135b96;
+    --color-info-light:    #dbf5ff;
+    --color-info-strong:   #0986ec;
+    --color-warn:          #d65800;
+    --color-warn-light:    #ffecc7;
+    --color-warn-text:     #752d0b;
+    --color-success:       #19674f;
+    --color-success-light: #e8fdec;
+    --color-success-strong:#188159;
+    --color-danger:        #e6000f;
+    --color-danger-light:  #ffe0e8;
+    --color-danger-strong: #be0018;
   }
   html, body {
     font-family: var(--font-sans);

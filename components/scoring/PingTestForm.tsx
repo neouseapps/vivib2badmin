@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { AxisBAnswers, SurveyConfig } from "@/lib/scoring/types";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui";
 import { X, Check } from "lucide-react";
 
 interface Props {
@@ -77,14 +78,15 @@ export function PingTestForm({ survey, current, onCancel, onSubmit }: Props) {
           </div>
         </div>
         <div className="px-5 py-4 border-t border-line flex items-center justify-end gap-2">
-          <button onClick={onCancel} className="btn-outline">Huỷ</button>
-          <button
+          <Button variant="outline" onClick={onCancel}>Huỷ</Button>
+          <Button
+            variant="primary"
             disabled={!allAnswered}
             onClick={() => allAnswered && onSubmit(draft as AxisBAnswers)}
-            className={cn("btn-primary", !allAnswered && "opacity-40 cursor-not-allowed")}
+            className={cn(!allAnswered && "opacity-40 cursor-not-allowed")}
           >
             <Check size={16} /> Submit Ping Test
-          </button>
+          </Button>
         </div>
       </div>
     </div>

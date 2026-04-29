@@ -8,6 +8,7 @@ import {
   Loader2, Clock, Shield, Info, AlertOctagon, History,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button, Badge, Card, Select } from "@/components/ui";
 import { TierBadge } from "@/components/tier-requests/TierBadge";
 import { SlaCountdown } from "@/components/tier-requests/SlaCountdown";
 import {
@@ -23,6 +24,7 @@ import {
 } from "@/lib/mock/partnerTier";
 import type { TierTrack, SystemChecklist } from "@/lib/tier-requests/types";
 import { usePartnerTierStore } from "@/lib/store/partner-tier-store";
+import { useComplimentaryGrants } from "@/lib/store/complimentary-grant-store";
 import { TierTrackPanel } from "@/components/partner/TierTrackPanel";
 import { QuickVerifyModal } from "@/components/partner/QuickVerifyModal";
 
@@ -168,9 +170,9 @@ function SingleFacilityBanner() {
         Đăng ký thêm cơ sở để sử dụng tính năng{" "}
         <span className="font-semibold">Đồng bộ hạng</span> và quản lý tập trung toàn hệ thống.
       </p>
-      <button className="btn-outline text-cap-md shrink-0 text-info border-info/40 whitespace-nowrap">
+      <Button variant="outline" className="text-cap-md shrink-0 text-info border-info/40 whitespace-nowrap">
         Thêm cơ sở
-      </button>
+      </Button>
     </div>
   );
 }
@@ -283,7 +285,7 @@ function TierHeaderCard({
   const trackMeta = track ? TRACK_META[track] : null;
 
   return (
-    <div className="card">
+    <Card>
       <div className={cn("h-1.5 w-full rounded-t-lg", TIER_ACCENT[tier])} />
       <div className="p-6 flex items-center gap-6">
         <div className="flex-1 min-w-0">
@@ -296,9 +298,9 @@ function TierHeaderCard({
             <span className="text-ink-3">·</span>
             <span className="text-lg font-semibold text-ink-1">{tierName}</span>
             {tier_status === "grace_period" && (
-              <span className="chip bg-warn-light text-warn-text text-cap-md flex items-center gap-1">
+              <Badge intention="warning" style="light">
                 <Clock size={10} /> Grace Period
-              </span>
+              </Badge>
             )}
           </div>
           {trackMeta && (
@@ -322,19 +324,20 @@ function TierHeaderCard({
 
         <div className="flex items-center gap-2 shrink-0">
           {tier_status === "grace_period" && (
-            <button
+            <Button
               onClick={onGraceExtend}
-              className="btn-outline text-cap-md flex items-center gap-1 border-warn/50 text-warn-text hover:bg-warn-light"
+              variant="outline"
+              className="text-cap-md border-warn/50 text-warn-text hover:bg-warn-light"
             >
               <Clock size={12} /> Gia hạn Grace Period
-            </button>
+            </Button>
           )}
           <Link href="/partner/my-tier/history" className="btn-outline text-cap-md flex items-center gap-1">
             Lịch sử yêu cầu <ArrowRight size={12} />
           </Link>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -364,7 +367,7 @@ function CompletenessMeter({
   );
 
   return (
-    <div className="card p-5">
+    <Card padding="lg">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-ink-1">Độ hoàn thiện hồ sơ</h2>
@@ -442,7 +445,7 @@ function CompletenessMeter({
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -462,7 +465,7 @@ function UpRankRoadmap({
   const isReady = readinessStatus === "up_rank_ready";
 
   return (
-    <div className="card p-5">
+    <Card padding="lg">
       <div className="mb-4">
         <h2 className="text-lg font-semibold text-ink-1">Lộ trình nâng hạng</h2>
         <p className="text-cap-md text-ink-3 mt-0.5">So sánh chỉ số hiện tại với ngưỡng Tier {currentTier + 1}</p>
@@ -536,18 +539,19 @@ function UpRankRoadmap({
             : `Cần hoàn thiện thêm ${roadmap.filter((m) => !m.passed).length} điều kiện để mở khóa yêu cầu nâng hạng.`}
         </p>
         <div className="relative group shrink-0">
-          <button
+          <Button
             onClick={isReady ? onUpgrade : undefined}
             disabled={!isReady}
+            variant="primary"
             className={cn(
-              "btn-primary transition-all whitespace-nowrap",
+              "transition-all whitespace-nowrap",
               isReady
                 ? "shadow-[0_0_20px_4px_rgba(200,165,58,0.5)] animate-pulse"
                 : "opacity-40 cursor-not-allowed"
             )}
           >
             Gửi yêu cầu nâng hạng
-          </button>
+          </Button>
           {!isReady && (
             <div className="absolute bottom-full right-0 mb-2 w-64 bg-ink-1 text-white text-cap-md rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lv2">
               Hoàn thiện đủ các điều kiện bên trên và duy trì liên tục 7 ngày để mở khoá tính năng này.
@@ -555,7 +559,7 @@ function UpRankRoadmap({
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -566,13 +570,13 @@ function TrackStatusPanel({ data }: { data: FacilityTierState }) {
   const hasAny = data.period_tier > 0 || data.synchronized_tier !== null || data.complimentary_tier !== null;
   if (!hasAny) return null;
   return (
-    <div className="card p-5">
+    <Card padding="lg">
       <div className="flex items-center gap-2 mb-3">
         <Shield size={15} className="text-ink-3" />
         <h2 className="text-body font-semibold text-ink-1">Chi tiết theo dõi hạng</h2>
       </div>
       <TierTrackPanel data={data} />
-    </div>
+    </Card>
   );
 }
 
@@ -664,14 +668,15 @@ function TierUpgradeModal({
         </div>
 
         <div className="px-6 py-4 border-t border-line flex items-center justify-end gap-3">
-          <button onClick={onClose} className="btn-outline">Hủy</button>
-          <button
+          <Button onClick={onClose} variant="outline">Hủy</Button>
+          <Button
             onClick={() => { if (allChecked) onSubmit(); }}
             disabled={!allChecked}
-            className={cn("btn-primary", !allChecked && "opacity-40 cursor-not-allowed")}
+            variant="primary"
+            className={cn(!allChecked && "opacity-40 cursor-not-allowed")}
           >
             Gửi yêu cầu
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -751,16 +756,13 @@ function GracePeriodExtensionModal({
             <label className="text-body font-semibold text-ink-1 block mb-1.5">
               Lý do gia hạn <span className="text-danger">*</span>
             </label>
-            <select
+            <Select
+              className="w-full"
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="input w-full"
-            >
-              <option value="">— Chọn lý do —</option>
-              {GRACE_REASONS.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
+              onChange={(next) => setReason(next)}
+              placeholder="— Chọn lý do —"
+              options={GRACE_REASONS.map((r) => ({ value: r, label: r }))}
+            />
           </div>
 
           {/* Details */}
@@ -800,14 +802,15 @@ function GracePeriodExtensionModal({
         </div>
 
         <div className="px-6 py-4 border-t border-line flex items-center justify-end gap-3">
-          <button onClick={onClose} className="btn-outline">Hủy</button>
-          <button
+          <Button onClick={onClose} variant="outline">Hủy</Button>
+          <Button
             onClick={() => { if (isValid) onSubmit(); }}
             disabled={!isValid}
-            className={cn("btn-primary", !isValid && "opacity-40 cursor-not-allowed")}
+            variant="primary"
+            className={cn(!isValid && "opacity-40 cursor-not-allowed")}
           >
             Gửi yêu cầu gia hạn
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -850,7 +853,7 @@ function RecentHistory({ facilityId }: { facilityId: string }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="card p-5">
+    <Card padding="lg">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <History size={15} className="text-ink-3" />
@@ -874,12 +877,12 @@ function RecentHistory({ facilityId }: { facilityId: string }) {
                 <span className="text-cap-md text-ink-3 ml-2">Tier {item.fromTier} → {item.toTier}</span>
               </div>
               <span className="text-cap-md text-ink-3 tabular-nums shrink-0">{date}</span>
-              <span className={cn("chip shrink-0", chipClass)}>{label}</span>
+              <Badge intention="neutral" className={cn("shrink-0", chipClass)}>{label}</Badge>
             </div>
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -914,6 +917,10 @@ export default function MyTierPage() {
   const isMultiFacility = PARTNER_FACILITIES.length > 1;
   const facilityData = FACILITY_TIER_DATA[displayId];
   const facility = PARTNER_FACILITIES.find((f) => f.id === displayId);
+
+  const complimentaryGrants = useComplimentaryGrants((s) => s.grants);
+  const activeGrant = complimentaryGrants[displayId];
+  const isGrantActive = activeGrant != null && new Date(activeGrant.expiresAt) > new Date();
 
   function handleFacilitySelect(id: string) {
     if (id === displayId || isTransitioning) return;
@@ -978,6 +985,25 @@ export default function MyTierPage() {
 
           <TrackStatusPanel data={facilityData} />
 
+          {/* Complimentary tier banner — hiển thị khi Admin đã cấp hạng đặc cách */}
+          {isGrantActive && (
+            <div className="flex items-start gap-3 bg-grade-aBg border border-grade-a/30 rounded-xl px-4 py-3.5">
+              <div className="w-8 h-8 rounded-full bg-grade-a/10 flex items-center justify-center shrink-0 mt-0.5">
+                <Gift size={15} className="text-grade-a" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-body font-semibold text-grade-a">Quyền truy cập đặc biệt do Visit Vietnam cấp</p>
+                <p className="text-cap-md text-ink-2 mt-0.5">
+                  Hạng <span className="font-semibold">Tier {activeGrant.tier}</span> đang có hiệu lực —
+                  hết hạn{" "}
+                  <span className="font-semibold">
+                    {new Date(activeGrant.expiresAt).toLocaleDateString("vi-VN")}
+                  </span>
+                </p>
+              </div>
+            </div>
+          )}
+
           <CompletenessMeter
             completeness={facilityData.completeness}
             missingFields={facilityData.missingFields}
@@ -993,7 +1019,7 @@ export default function MyTierPage() {
 
           {/* Sync CTA (only for multi-facility) */}
           {isMultiFacility && (
-            <div className="card p-5 flex items-center gap-4">
+            <Card padding="lg" className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-info-light flex items-center justify-center shrink-0">
                 <Link2 size={18} className="text-info" />
               </div>
@@ -1006,7 +1032,7 @@ export default function MyTierPage() {
               <Link href="/partner/my-tier/sync-request" className="btn-outline shrink-0 flex items-center gap-1">
                 Gửi yêu cầu <ArrowRight size={12} />
               </Link>
-            </div>
+            </Card>
           )}
 
           <RecentHistory facilityId={displayId} />

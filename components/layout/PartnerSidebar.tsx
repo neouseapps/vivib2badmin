@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Settings, ChevronDown, Check, PanelLeftClose, PanelLeftOpen,
-  LayoutGrid, FileText, Diamond, TrendingUp, BarChart2, Users,
+  LayoutGrid, FileText, Diamond, TrendingUp, BarChart2, Users, Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { usePortalStore } from "@/lib/store/portal-store";
@@ -30,6 +30,13 @@ const NAV: NavItem[] = [
     icon: FileText,
     children: [
       { href: "/partner/services-v2", label: "Dịch vụ & Xếp hạng" },
+    ],
+  },
+  {
+    label: "Nội dung",
+    icon: Newspaper,
+    children: [
+      { href: "/partner/posts", label: "Bài đăng" },
     ],
   },
   {

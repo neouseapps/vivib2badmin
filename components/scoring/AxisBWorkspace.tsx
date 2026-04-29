@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { PhoneCall, Lock, RefreshCw, CheckCircle, X, MessageSquare, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui";
 import type { AxisBAnswers, CallGuideSet, SurveyConfig } from "@/lib/scoring/types";
 
 interface Props {
@@ -81,10 +82,10 @@ export function AxisBWorkspace({ survey, current, axisB, locked, allLocked, call
             </div>
             <div className="flex-1" />
             {!allLocked && !locked && (
-              <button onClick={handleStartEdit} className="btn-outline h-8 text-cap-md shrink-0">
+              <Button variant="outline" onClick={handleStartEdit} className="h-8 text-cap-md shrink-0">
                 <RefreshCw size={12} />
                 {current ? "Cập nhật Axis B" : "Ping Test"}
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -98,9 +99,9 @@ export function AxisBWorkspace({ survey, current, axisB, locked, allLocked, call
             <div className="text-cap-md text-ink-2 font-medium text-center">
               Chưa liên hệ đối tác.<br />Xác nhận để mở Ping Test.
             </div>
-            <button onClick={onUnlock} className="btn-primary h-8 text-cap-md">
+            <Button variant="primary" onClick={onUnlock} className="h-8 text-cap-md">
               <PhoneCall size={12} /> Xác nhận đã liên hệ
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -202,14 +203,15 @@ export function AxisBWorkspace({ survey, current, axisB, locked, allLocked, call
 
             {/* Footer */}
             <div className="px-5 py-4 bg-bg-lv2/40 border-t border-line flex items-center justify-end gap-2">
-              <button onClick={handleCancel} className="btn-outline h-9 text-cap-md">Huỷ</button>
-              <button
+              <Button variant="outline" onClick={handleCancel} className="h-9 text-cap-md">Huỷ</Button>
+              <Button
+                variant="primary"
                 disabled={!dirty || !allAnswered}
                 onClick={handleSubmit}
-                className={cn("btn-primary h-9 text-cap-md", (!dirty || !allAnswered) && "opacity-30 cursor-not-allowed")}
+                className={cn("h-9 text-cap-md", (!dirty || !allAnswered) && "opacity-30 cursor-not-allowed")}
               >
                 <RefreshCw size={12} /> Lưu điểm
-              </button>
+              </Button>
             </div>
           </div>
         </div>

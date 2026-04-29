@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { AlertTriangle, X, Zap } from "lucide-react";
+import { Button } from "@/components/ui";
 
 interface Props {
   open: boolean;
@@ -72,15 +73,15 @@ export function PublishConfirmModal({ open, onClose, onConfirm, affectedLeadsCou
 
         {/* Footer */}
         <div className="flex justify-end gap-2 px-5 py-3 border-t border-line bg-bg-lv2/40 rounded-b-xl">
-          <button onClick={handleClose} className="btn-outline">Huỷ</button>
-          <button
+          <Button variant="outline" onClick={handleClose}>Huỷ</Button>
+          <Button
+            variant="primary"
             onClick={handleConfirm}
             disabled={!changeNote.trim()}
-            className="btn-primary flex items-center gap-1.5 disabled:opacity-50"
           >
             <Zap size={14} />
             Xác nhận &amp; Áp dụng
-          </button>
+          </Button>
         </div>
       </div>
     </div>

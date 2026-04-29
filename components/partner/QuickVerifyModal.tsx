@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui";
 import type { QuickVerifyField } from "@/lib/mock/partnerTier";
 
 export function QuickVerifyModal({
@@ -68,14 +69,15 @@ export function QuickVerifyModal({
         </div>
 
         <div className="px-6 py-4 border-t border-line flex items-center justify-end gap-3">
-          <button onClick={onClose} className="btn-outline">Để sau</button>
-          <button
+          <Button onClick={onClose} variant="outline">Để sau</Button>
+          <Button
             onClick={() => { if (allChecked) onSubmit(); }}
             disabled={!allChecked}
-            className={cn("btn-primary", !allChecked && "opacity-40 cursor-not-allowed")}
+            variant="primary"
+            className={cn(!allChecked && "opacity-40 cursor-not-allowed")}
           >
             Xác nhận — Vẫn chính xác
-          </button>
+          </Button>
         </div>
       </div>
     </div>

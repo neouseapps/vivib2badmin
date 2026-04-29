@@ -11,6 +11,7 @@ import { TierBadge } from "@/components/tier-requests/TierBadge";
 import { useTierRequests } from "@/lib/store/tier-requests-store";
 import type { TierRequest, Vertical, TierRequestStatus, TierLevel } from "@/lib/tier-requests/types";
 import { cn } from "@/lib/cn";
+import { Button, Card, Select } from "@/components/ui";
 
 type TabKind = "upgrade" | "sync";
 
@@ -140,45 +141,47 @@ export default function TierRequestsPage() {
               placeholder="Tìm cơ sở hoặc đối tác…"
             />
           </div>
-          <select
+          <Select
+            className="min-w-[140px] max-w-[180px]"
+            size="sm"
             value={uVertical}
-            onChange={(e) => setUVertical(e.target.value as Vertical | "")}
-            className="input min-w-[140px] max-w-[180px]"
-          >
-            <option value="">Tất cả vertical</option>
-            {VERTICALS.map((v) => (
-              <option key={v} value={v}>{VERTICAL_LABEL[v]}</option>
-            ))}
-          </select>
-          <select
+            onChange={(next) => setUVertical(next as Vertical | "")}
+            options={[
+              { value: "", label: "Tất cả vertical" },
+              ...VERTICALS.map((v) => ({ value: v, label: VERTICAL_LABEL[v] })),
+            ]}
+          />
+          <Select
+            className="min-w-[140px] max-w-[180px]"
+            size="sm"
             value={uStatus}
-            onChange={(e) => setUStatus(e.target.value as TierRequestStatus | "")}
-            className="input min-w-[140px] max-w-[180px]"
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="pending">Đang chờ</option>
-            <option value="deferred">Trì hoãn</option>
-          </select>
-          <select
-            value={uFromTier}
-            onChange={(e) => setUFromTier(e.target.value === "" ? "" : Number(e.target.value) as TierLevel)}
-            className="input min-w-[140px] max-w-[180px]"
-          >
-            <option value="">Hạng hiện tại</option>
-            {TIER_LEVELS.map((t) => (
-              <option key={t} value={t}>Tier {t}</option>
-            ))}
-          </select>
-          <select
-            value={uToTier}
-            onChange={(e) => setUToTier(e.target.value === "" ? "" : Number(e.target.value) as TierLevel)}
-            className="input min-w-[140px] max-w-[180px]"
-          >
-            <option value="">Hạng yêu cầu</option>
-            {TIER_LEVELS.map((t) => (
-              <option key={t} value={t}>Tier {t}</option>
-            ))}
-          </select>
+            onChange={(next) => setUStatus(next as TierRequestStatus | "")}
+            options={[
+              { value: "", label: "Tất cả trạng thái" },
+              { value: "pending", label: "Đang chờ" },
+              { value: "deferred", label: "Trì hoãn" },
+            ]}
+          />
+          <Select
+            className="min-w-[140px] max-w-[180px]"
+            size="sm"
+            value={uFromTier === "" ? "" : String(uFromTier)}
+            onChange={(next) => setUFromTier(next === "" ? "" : (Number(next) as TierLevel))}
+            options={[
+              { value: "", label: "Hạng hiện tại" },
+              ...TIER_LEVELS.map((t) => ({ value: String(t), label: `Tier ${t}` })),
+            ]}
+          />
+          <Select
+            className="min-w-[140px] max-w-[180px]"
+            size="sm"
+            value={uToTier === "" ? "" : String(uToTier)}
+            onChange={(next) => setUToTier(next === "" ? "" : (Number(next) as TierLevel))}
+            options={[
+              { value: "", label: "Hạng yêu cầu" },
+              ...TIER_LEVELS.map((t) => ({ value: String(t), label: `Tier ${t}` })),
+            ]}
+          />
         </div>
 
         {upgradeRows.length === 0 ? (
@@ -202,7 +205,7 @@ export default function TierRequestsPage() {
             </thead>
             <tbody>
               {upgradeRows.map((req) => (
-                <RequestRow key={req.id} req={req} onOpen={() => selectRequest(req.id)} onAudit={() => openAuditDrawer(req.id)} />
+                <RequestRow key={req.id} req={req} onOpen={() => selectRequest(req.id)} onAudit={() => openAuditDrawer(req.facility.id)} />
               ))}
             </tbody>
           </table>
@@ -252,45 +255,47 @@ export default function TierRequestsPage() {
               placeholder="Tìm cơ sở hoặc đối tác…"
             />
           </div>
-          <select
+          <Select
+            className="min-w-[140px] max-w-[180px]"
+            size="sm"
             value={sVertical}
-            onChange={(e) => setSVertical(e.target.value as Vertical | "")}
-            className="input min-w-[140px] max-w-[180px]"
-          >
-            <option value="">Tất cả vertical</option>
-            {VERTICALS.map((v) => (
-              <option key={v} value={v}>{VERTICAL_LABEL[v]}</option>
-            ))}
-          </select>
-          <select
+            onChange={(next) => setSVertical(next as Vertical | "")}
+            options={[
+              { value: "", label: "Tất cả vertical" },
+              ...VERTICALS.map((v) => ({ value: v, label: VERTICAL_LABEL[v] })),
+            ]}
+          />
+          <Select
+            className="min-w-[140px] max-w-[180px]"
+            size="sm"
             value={sStatus}
-            onChange={(e) => setSStatus(e.target.value as TierRequestStatus | "")}
-            className="input min-w-[140px] max-w-[180px]"
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="pending">Đang chờ</option>
-            <option value="deferred">Trì hoãn</option>
-          </select>
-          <select
-            value={sFromTier}
-            onChange={(e) => setSFromTier(e.target.value === "" ? "" : Number(e.target.value) as TierLevel)}
-            className="input min-w-[140px] max-w-[180px]"
-          >
-            <option value="">Hạng hiện tại</option>
-            {TIER_LEVELS.map((t) => (
-              <option key={t} value={t}>Tier {t}</option>
-            ))}
-          </select>
-          <select
-            value={sToTier}
-            onChange={(e) => setSToTier(e.target.value === "" ? "" : Number(e.target.value) as TierLevel)}
-            className="input min-w-[140px] max-w-[180px]"
-          >
-            <option value="">Hạng yêu cầu</option>
-            {TIER_LEVELS.map((t) => (
-              <option key={t} value={t}>Tier {t}</option>
-            ))}
-          </select>
+            onChange={(next) => setSStatus(next as TierRequestStatus | "")}
+            options={[
+              { value: "", label: "Tất cả trạng thái" },
+              { value: "pending", label: "Đang chờ" },
+              { value: "deferred", label: "Trì hoãn" },
+            ]}
+          />
+          <Select
+            className="min-w-[140px] max-w-[180px]"
+            size="sm"
+            value={sFromTier === "" ? "" : String(sFromTier)}
+            onChange={(next) => setSFromTier(next === "" ? "" : (Number(next) as TierLevel))}
+            options={[
+              { value: "", label: "Hạng hiện tại" },
+              ...TIER_LEVELS.map((t) => ({ value: String(t), label: `Tier ${t}` })),
+            ]}
+          />
+          <Select
+            className="min-w-[140px] max-w-[180px]"
+            size="sm"
+            value={sToTier === "" ? "" : String(sToTier)}
+            onChange={(next) => setSToTier(next === "" ? "" : (Number(next) as TierLevel))}
+            options={[
+              { value: "", label: "Hạng yêu cầu" },
+              ...TIER_LEVELS.map((t) => ({ value: String(t), label: `Tier ${t}` })),
+            ]}
+          />
         </div>
 
         {syncRows.length === 0 ? (
@@ -313,7 +318,7 @@ export default function TierRequestsPage() {
             </thead>
             <tbody>
               {syncRows.map((req) => (
-                <SyncRow key={req.id} req={req} onOpen={() => selectRequest(req.id)} onAudit={() => openAuditDrawer(req.id)} />
+                <SyncRow key={req.id} req={req} onOpen={() => selectRequest(req.id)} onAudit={() => openAuditDrawer(req.facility.id)} />
               ))}
             </tbody>
           </table>
@@ -353,18 +358,18 @@ export default function TierRequestsPage() {
       <Header
         title="Yêu cầu xếp hạng"
         actions={
-          <button
+          <Button
+            variant="primary"
             onClick={() => setGrantOpen(true)}
-            className="btn-primary flex items-center gap-1.5"
           >
             <Gift size={14} /> Cấp hạng ưu đãi
-          </button>
+          </Button>
         }
       />
 
       <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
         {/* Tabs */}
-        <div className="card overflow-hidden">
+        <Card className="overflow-hidden">
           <div className="flex border-b border-line bg-bg-lv1 px-4 gap-0">
             <TabBtn active={tab === "upgrade"} onClick={() => setTab("upgrade")}>
               Nâng hạng
@@ -380,8 +385,9 @@ export default function TierRequestsPage() {
             </TabBtn>
           </div>
 
-          {tab === "upgrade" ? <UpgradeQueueTab /> : <SyncQueueTab />}
-        </div>
+          {tab === "upgrade" && <UpgradeQueueTab />}
+          {tab === "sync"    && <SyncQueueTab />}
+        </Card>
       </div>
 
       <RequestDrawer request={selectedRequest} onClose={() => selectRequest(null)} />

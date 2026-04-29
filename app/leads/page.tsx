@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { GradeBadge } from "@/components/scoring/GradeBadge";
 import { Sparkline } from "@/components/scoring/Sparkline";
 import { useScoring, getLeadDerived } from "@/lib/store/scoring-store";
+import { Button, Badge, Card } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { Lock, Search, Filter, ArrowUpDown } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -36,12 +37,12 @@ export default function LeadsPage() {
             <input value={q} onChange={(e)=>setQ(e.target.value)}
               className="input pl-9" placeholder="Tìm theo tên lead…"/>
           </div>
-          <button className="btn-outline"><Filter size={16}/>Lọc</button>
-          <button className="btn-outline"><ArrowUpDown size={16}/>Sắp xếp</button>
+          <Button variant="outline"><Filter size={16}/>Lọc</Button>
+          <Button variant="outline"><ArrowUpDown size={16}/>Sắp xếp</Button>
           <Link href="/settings/scoring" className="btn-primary ml-auto">Cấu hình chấm điểm</Link>
         </div>
 
-        <div className="card overflow-hidden">
+        <Card className="overflow-hidden">
           <table className="w-full text-body">
             <thead className="bg-bg-lv2 border-b border-line text-cap-md text-ink-3">
               <tr>
@@ -67,9 +68,9 @@ export default function LeadsPage() {
                     </Link>
                   </td>
                   <td className="px-3 py-3">
-                    <span className={cn("chip", STATUS_STYLE[lead.contactStatus])}>
+                    <Badge intention="neutral" className={STATUS_STYLE[lead.contactStatus]}>
                       {STATUS_LABEL[lead.contactStatus]}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="px-3 py-3 text-right font-mono">
                     <span className="font-semibold">{axisAEff.toFixed(0)}</span>
@@ -93,7 +94,7 @@ export default function LeadsPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       </div>
     </>
   );

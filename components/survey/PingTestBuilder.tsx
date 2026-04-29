@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import type { SurveyCriterion, SurveyConfig, SurveyOption } from "@/lib/scoring/types";
 import { Trash2, Plus, EyeOff, GripVertical, Power, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui";
 
 interface Props {
   survey: SurveyConfig;
@@ -191,12 +192,13 @@ export function PingTestBuilder({
             ))}
           </div>
 
-          <button
+          <Button
+            variant="ghost"
             onClick={() => addOpt(c.id)}
-            className="btn-ghost h-8 text-cap-md mt-2 text-info"
+            className="h-8 text-cap-md mt-2 text-info"
           >
             <Plus size={12} />Thêm tuỳ chọn
-          </button>
+          </Button>
           </>)}
         </div>
       ))}

@@ -15,6 +15,7 @@ import { SlaCountdown } from "./SlaCountdown";
 import { useTierRequests } from "@/lib/store/tier-requests-store";
 import type { TierRequest, TierLevel, Vertical } from "@/lib/tier-requests/types";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -131,16 +132,27 @@ export function RequestDrawer({ request, onClose }: Props) {
     return true; // sync requests không có checklist
   })();
 
+  function buildSnapshot() {
+    if (!request || request.details.kind !== "upgrade") return undefined;
+    const metrics = Object.values(request.details.systemChecklist);
+    return {
+      systemPassed: metrics.filter((m) => m.passed).length,
+      systemTotal: metrics.length,
+      manualChecked: checkedItems.size,
+      manualTotal: request.details.complianceItems.length,
+    };
+  }
+
   function handleApproveConfirm() {
     if (!request) return;
-    approveRequest(request.id);
+    approveRequest(request.id, buildSnapshot());
     setApproveOpen(false);
     onClose();
   }
 
   function handleDefer() {
     if (!request || deferText.trim().length < 50) return;
-    deferRequest(request.id, deferText.trim());
+    deferRequest(request.id, deferText.trim(), buildSnapshot());
     setDeferText("");
     setDeferOpen(false);
     onClose();
@@ -209,7 +221,7 @@ export function RequestDrawer({ request, onClose }: Props) {
                   location={request.facility.location}
                   fromTier={request.fromTier}
                   toTier={request.toTier}
-                  onClickFrom={(e) => { e.stopPropagation(); openAuditDrawer(request.id); }}
+                  onClickFrom={(e) => { e.stopPropagation(); openAuditDrawer(request.facility.id); }}
                 />
 
                 {request.deferReason && (
@@ -264,13 +276,14 @@ export function RequestDrawer({ request, onClose }: Props) {
                         <span className={cn("text-cap", deferText.trim().length >= 50 ? "text-success" : "text-ink-4")}>
                           {deferText.trim().length} / 50 ký tự tối thiểu
                         </span>
-                        <button
+                        <Button
+                          variant="primary"
                           onClick={handleDefer}
                           disabled={deferText.trim().length < 50}
-                          className="btn-primary flex items-center gap-1.5 disabled:opacity-50 text-cap-md"
+                          className="text-cap-md"
                         >
                           <Send size={13} /> Gửi yêu cầu bổ sung
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </motion.div>
@@ -279,25 +292,27 @@ export function RequestDrawer({ request, onClose }: Props) {
 
               {/* Sticky action bar */}
               <div className="shrink-0 border-t border-line bg-bg-lv1 px-5 py-3 flex items-center justify-between gap-3">
-                <button
+                <Button
+                  variant="outline"
                   onClick={() => { setDeferOpen((v) => !v); }}
                   className={cn(
-                    "btn-outline flex items-center gap-1.5 border-warn/60 text-warn-text hover:bg-warn-light",
+                    "border-warn/60 text-warn-text hover:bg-warn-light",
                     deferOpen && "bg-warn-light"
                   )}
                 >
                   <Clock size={14} />
                   Trì hoãn
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
                   onClick={() => setApproveOpen(true)}
                   disabled={!canApprove}
-                  className="btn-primary flex items-center gap-1.5 bg-success border-success hover:bg-success/90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="bg-success border-success hover:bg-success/90"
                   title={!canApprove ? "Cần hoàn thành tất cả chỉ số và kiểm tra thủ công trước khi phê duyệt" : undefined}
                 >
                   <CheckCircle2 size={14} />
                   Phê duyệt
-                </button>
+                </Button>
               </div>
             </motion.div>
           </>

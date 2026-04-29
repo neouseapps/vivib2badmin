@@ -11,6 +11,7 @@ import { isSubGroup } from "@/lib/scoring/types";
 import { LEAD_TREE } from "@/lib/mock/config";
 import { cn } from "@/lib/cn";
 import { GripVertical, Plus, Trash2, Layers } from "lucide-react";
+import { Select, type SelectGroup } from "@/components/ui";
 import {
   DndContext,
   closestCenter,
@@ -167,28 +168,27 @@ function SortableConditionRow({
       <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing shrink-0 opacity-50 group-hover:opacity-100 touch-none">
         <GripVertical size={13} className="text-ink-4" />
       </button>
-      <select
+      <Select
+        className="flex-1 min-w-0"
+        size="sm"
         value={row.field}
-        onChange={(e) => {
-          const meta = FLAT_FIELDS.find((f) => f.key === e.target.value);
+        onChange={(next) => {
+          const meta = FLAT_FIELDS.find((f) => f.key === next);
           const ops = getOperators(meta?.type ?? "string");
-          onUpdate({ field: e.target.value, operator: ops[0].value, value: "" });
+          onUpdate({ field: next, operator: ops[0].value, value: "" });
         }}
-        className="flex-1 min-w-0 text-cap-md h-8 rounded-lg border border-line bg-white px-2 focus:outline-none focus:ring-2 focus:ring-info/40"
-      >
-        {FIELD_GROUPS.map((g) => (
-          <optgroup key={g.group} label={g.group}>
-            {g.items.map((it) => <option key={it.key} value={it.key}>{it.label}</option>)}
-          </optgroup>
-        ))}
-      </select>
-      <select
+        groups={FIELD_GROUPS.map<SelectGroup>((g) => ({
+          label: g.group,
+          options: g.items.map((it) => ({ value: it.key, label: it.label })),
+        }))}
+      />
+      <Select
+        className="w-28 shrink-0"
+        size="sm"
         value={row.operator}
-        onChange={(e) => onUpdate({ operator: e.target.value as ConditionOperator })}
-        className="w-28 shrink-0 text-cap-md h-8 rounded-lg border border-line bg-white px-2 focus:outline-none focus:ring-2 focus:ring-info/40"
-      >
-        {operators.map((op) => <option key={op.value} value={op.value}>{op.label}</option>)}
-      </select>
+        onChange={(next) => onUpdate({ operator: next as ConditionOperator })}
+        options={operators.map((op) => ({ value: op.value, label: op.label }))}
+      />
       {!noValue(row.operator) && (
         <input
           value={row.value}

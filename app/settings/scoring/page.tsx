@@ -28,6 +28,7 @@ import { BatchProgressBanner } from "@/components/ops/BatchProgressBanner";
 import { PublishConfirmModal } from "@/components/ops/PublishConfirmModal";
 import { VersionHistoryPanel } from "@/components/ops/VersionHistoryPanel";
 import { ReadOnlyOverlay } from "@/components/ops/ReadOnlyOverlay";
+import { Button, Badge, Card } from "@/components/ui";
 
 type Tab = "axisA" | "axisB" | "routing";
 
@@ -162,21 +163,21 @@ function AxisATab() {
       {/* Left: Rule workspace */}
       <div className="p-6 space-y-5 border-r border-line bg-white overflow-y-auto scrollbar-thin">
         {/* Balance Slider */}
-        <div className="card p-5">
+        <Card padding="lg">
           <BalanceSlider
             values={weights}
             labels={labels}
             colors={colors}
             onChange={onSliderChange}
           />
-        </div>
+        </Card>
 
         {/* Add rule */}
         <div className="flex items-center gap-2">
-          <span className="chip bg-info-light text-info text-[10px]">
+          <Badge intention="info" style="light" className="text-[10px]">
             <Zap size={10} />Source: API
-          </span>
-          <button onClick={onAddRule} className="btn-primary ml-auto"><Plus size={14}/>Thêm Rule</button>
+          </Badge>
+          <Button variant="primary" onClick={onAddRule} className="ml-auto"><Plus size={14}/>Thêm Rule</Button>
         </div>
 
         <RuleDndList
@@ -287,18 +288,18 @@ function AxisBTab() {
 
   return (
     <div className="p-6 space-y-5 max-w-5xl overflow-y-auto flex-1 scrollbar-thin">
-      <div className="card p-4">
+      <Card padding="md">
         <BalanceSlider
           values={sliderValues}
           labels={sliderLabels}
           colors={sliderColors}
           onChange={setCriterionWeights}
         />
-      </div>
+      </Card>
 
       <div className="flex items-center gap-2">
         <h3 className="section-title flex-1">Ngân hàng câu hỏi (Ping Test)</h3>
-        <button onClick={addCriterion} className="btn-primary"><Plus size={14}/>Thêm tiêu chí</button>
+        <Button variant="primary" onClick={addCriterion}><Plus size={14}/>Thêm tiêu chí</Button>
       </div>
 
       <PingTestBuilder
@@ -344,10 +345,10 @@ function RoutingTab() {
       <div className="max-w-6xl mx-auto space-y-6">
 
         {/* Merged card: row 1 = Sankey, row 2 = 2-col controls */}
-        <div className="card p-5 space-y-5">
+        <Card padding="lg" className="space-y-5">
           <div className="flex items-center gap-2">
             <h3 className="section-title">Phễu lọc lead</h3>
-            <span className="chip bg-success/10 text-success ml-auto text-[10px]">Live</span>
+            <Badge intention="neutral" className="bg-success/10 text-success ml-auto text-[10px]">Live</Badge>
           </div>
 
           {/* Row 1: full-width Sankey diagram */}
@@ -362,7 +363,7 @@ function RoutingTab() {
               <QuotaControl />
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* Per-rep lead allocation */}
         <div>

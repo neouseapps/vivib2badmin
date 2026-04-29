@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { CustomVariable } from "@/lib/scoring/types";
 import { useScoring } from "@/lib/store/scoring-store";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui";
 import { X, AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface Props {
@@ -168,14 +169,14 @@ export function ImportVarModal({ onClose }: Props) {
         </div>
 
         <div className="flex justify-end gap-2 px-5 py-3 border-t border-line bg-bg-lv2/40">
-          <button onClick={onClose} className="btn-outline">Hủy</button>
-          <button
+          <Button variant="outline" onClick={onClose}>Hủy</Button>
+          <Button
+            variant="primary"
             onClick={handleImport}
             disabled={!name.trim() || nameInvalid || nameDup || !parseResult?.ok}
-            className="btn-primary disabled:opacity-50"
           >
             Import biến
-          </button>
+          </Button>
         </div>
       </div>
     </div>

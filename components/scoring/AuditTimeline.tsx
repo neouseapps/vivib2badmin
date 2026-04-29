@@ -1,6 +1,7 @@
 import type { AuditEntry } from "@/lib/scoring/types";
 import { Cpu, User, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Badge } from "@/components/ui";
 
 export function AuditTimeline({ entries }: { entries: AuditEntry[] }) {
   if (!entries.length) {
@@ -20,9 +21,9 @@ export function AuditTimeline({ entries }: { entries: AuditEntry[] }) {
               <Icon size={8}/>
             </span>
             <div className="flex items-center gap-2">
-              <span className={cn("chip", e.source === "API" ? "bg-info-light text-info" : "bg-bg-lv3 text-ink-2")}>
+              <Badge intention={e.source === "API" ? "info" : "neutral"} className={e.source !== "API" ? "bg-bg-lv3 text-ink-2" : undefined}>
                 {e.source === "API" ? "API" : "CRM"}
-              </span>
+              </Badge>
               <span className="text-cap-md text-ink-3">Axis {e.axis}</span>
               {e.delta !== 0 && (
                 <span className={cn(

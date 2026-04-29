@@ -2,6 +2,7 @@
 
 import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button, Badge } from "@/components/ui";
 import { TierBadge } from "@/components/tier-requests/TierBadge";
 import type { FacilityTierState } from "@/lib/mock/partnerTier";
 
@@ -134,13 +135,13 @@ export function TierTrackPanel({
                 {(key === "sync" || key === "complimentary") && !isActive && (
                   key === "sync" ? (
                     syncRequestStatus === "pending" ? (
-                      <span className="chip bg-info-light text-info text-[10px]">Đang chờ</span>
+                      <Badge intention="info" style="light" className="text-[10px]">Đang chờ</Badge>
                     ) : syncRequestStatus === "deferred" ? (
-                      <span className="chip bg-warn-light text-warn-text text-[10px]">Cần bổ sung</span>
+                      <Badge intention="warning" style="light" className="text-[10px]">Cần bổ sung</Badge>
                     ) : onSyncRequest ? (
-                      <button type="button" onClick={onSyncRequest} className="btn-primary text-cap-md">
+                      <Button type="button" onClick={onSyncRequest} variant="primary" className="text-cap-md">
                         Đồng bộ hạng
-                      </button>
+                      </Button>
                     ) : (
                       <span className="text-[10px] text-ink-4 italic">Chưa kích hoạt</span>
                     )

@@ -3,6 +3,7 @@ import { useState } from "react";
 // checked + onToggle are lifted to RequestDrawer for approval gate
 import { CheckSquare, Square, CheckCircle2, XCircle, ChevronDown } from "lucide-react";
 import type { UpgradeRequest, FacilityRef } from "@/lib/tier-requests/types";
+import { Card } from "@/components/ui";
 import { cn } from "@/lib/cn";
 
 
@@ -99,7 +100,7 @@ export function UpgradeDetails({ details, checked, onToggle }: Props) {
             {completedCount}/{details.complianceItems.length} hoàn thành
           </span>
         </div>
-        <div className="card divide-y divide-line">
+        <Card className="divide-y divide-line">
           {details.complianceItems.map((item) => {
             const isChecked = checked.has(item.id);
             return (
@@ -123,7 +124,7 @@ export function UpgradeDetails({ details, checked, onToggle }: Props) {
               </button>
             );
           })}
-        </div>
+        </Card>
       </section>}
     </div>
   );

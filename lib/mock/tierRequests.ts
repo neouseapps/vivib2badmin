@@ -1,4 +1,7 @@
-import type { TierRequest, FacilityRef, TierAuditEntry, ComplianceItem, SystemChecklist } from "@/lib/tier-requests/types";
+import type {
+  TierRequest, FacilityRef, TierAuditEntry, ComplianceItem, SystemChecklist,
+  GracePeriodEvent, GrantHistoryEntry, PartnerBenefitsEvent,
+} from "@/lib/tier-requests/types";
 
 // Base time: 2026-04-21T10:00:00Z
 const BASE = 1776765600000;
@@ -80,8 +83,12 @@ const COMPLIANCE_3TO4: ComplianceItem[] = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function audit(id: string, atOffset: number, actor: string, action: string, track: TierAuditEntry["track"], reason?: string): TierAuditEntry {
-  return { id, at: d(atOffset), actor, action, reason, track };
+function audit(
+  id: string, atOffset: number, actor: string, action: string,
+  track: TierAuditEntry["track"], reason?: string,
+  extra?: Partial<TierAuditEntry>
+): TierAuditEntry {
+  return { id, at: d(atOffset), actor, action, reason, track, kind: "request", ...extra };
 }
 
 const f = (id: string, name: string, tier: FacilityRef["currentTier"], vertical: FacilityRef["vertical"], partner: string, location: string, dataScore: number, serviceScore: number): FacilityRef => ({
@@ -145,7 +152,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     auditHistory: [
       audit("a-003-1", -300, "Hệ thống", "Yêu cầu nâng hạng Tier 3 → 4 được tạo tự động", "organic"),
       audit("a-003-2", -240, "Lê Minh Tuấn", "Hồ sơ đã nộp đầy đủ", "organic"),
-      audit("a-003-3", -72, "Phạm Quốc Bảo", "Trì hoãn — chờ xác minh pháp lý", "organic", "Hồ sơ pháp lý chưa đầy đủ"),
+      audit("a-003-3", -72, "Phạm Quốc Bảo", "Trì hoãn — chờ xác minh pháp lý", "organic", "Hồ sơ pháp lý chưa đầy đủ",
+        { fromTier: 3, toTier: 4, complianceSnapshot: { systemPassed: 2, systemTotal: 3, manualChecked: 0, manualTotal: 3 } }),
     ],
   },
 
@@ -237,7 +245,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     auditHistory: [
       audit("a-008-1", -400, "Hệ thống", "Yêu cầu nâng hạng Tier 3 → 4 tự động", "organic"),
       audit("a-008-2", -336, "Phan Thị Thu", "Hồ sơ đã nộp", "organic"),
-      audit("a-008-3", -96, "Trần Văn Long", "Trì hoãn — thiếu chứng chỉ quốc tế", "organic", "Cần thêm bằng chứng tiêu chuẩn golf quốc tế"),
+      audit("a-008-3", -96, "Trần Văn Long", "Trì hoãn — thiếu chứng chỉ quốc tế", "organic", "Cần thêm bằng chứng tiêu chuẩn golf quốc tế",
+        { fromTier: 3, toTier: 4, complianceSnapshot: { systemPassed: 3, systemTotal: 3, manualChecked: 1, manualTotal: 3 } }),
       audit("a-008-4", -48, "Phan Thị Thu", "Đã nhận yêu cầu bổ sung, đang xử lý", "organic"),
     ],
   },
@@ -258,7 +267,8 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     auditHistory: [
       audit("a-009-1", -300, "Hệ thống", "Yêu cầu nâng hạng Tier 0 → 1 tự động", "organic"),
       audit("a-009-2", -288, "Cầm Thị Hoa", "Đăng ký lần đầu", "organic"),
-      audit("a-009-3", -120, "Nguyễn Thị Bình", "Trì hoãn — ảnh gallery chưa đạt", "organic", "Thiếu ảnh chất lượng cao"),
+      audit("a-009-3", -120, "Nguyễn Thị Bình", "Trì hoãn — chưa đủ đánh giá xác thực", "organic", "Thiếu đánh giá xác thực: 3/5 lượt",
+        { fromTier: 0, toTier: 1, complianceSnapshot: { systemPassed: 2, systemTotal: 3, manualChecked: 0, manualTotal: 2 } }),
     ],
   },
 
@@ -494,7 +504,165 @@ export const MOCK_TIER_REQUESTS: TierRequest[] = [
     auditHistory: [
       audit("a-020-1", -336, "Hệ thống", "Yêu cầu nâng hạng Tier 0 → 1 tự động", "organic"),
       audit("a-020-2", -312, "Trương Văn Bình", "Đăng ký lần đầu", "organic"),
-      audit("a-020-3", -144, "Nguyễn Thị Bình", "Trì hoãn — SKU phòng chưa đủ", "organic", "Thiếu danh mục phòng"),
+      audit("a-020-3", -144, "Nguyễn Thị Bình", "Trì hoãn — SKU phòng chưa đủ", "organic", "Thiếu danh mục phòng",
+        { fromTier: 0, toTier: 1, complianceSnapshot: { systemPassed: 2, systemTotal: 3, manualChecked: 0, manualTotal: 2 } }),
     ],
   },
 ];
+
+// ─── Completed audit history (đã duyệt — không còn trong active requests) ─────
+// Keyed by facilityId
+
+export const COMPLETED_AUDIT_HISTORY: Record<string, TierAuditEntry[]> = {
+  // fac-101 (Vinpearl Nha Trang): đã từng được duyệt Tier 1→2 trước đó
+  "fac-101": [
+    audit("h-101-1", -2160, "Hệ thống", "Yêu cầu nâng hạng Tier 1 → 2 được tạo tự động", "organic"),
+    audit("h-101-2", -2100, "Nguyễn Văn Hùng", "Đối tác nộp hồ sơ đầy đủ", "organic"),
+    audit("h-101-3", -2040, "Lê Thị Hoa", "Phê duyệt — Nâng hạng Tier 1 → 2", "organic", undefined,
+      { fromTier: 1, toTier: 2, complianceSnapshot: { systemPassed: 7, systemTotal: 7, manualChecked: 0, manualTotal: 0 } }),
+  ],
+  // fac-110 (Mường Thanh Luxury Hạ Long): đã từng bị trì hoãn rồi được duyệt Tier 1→2
+  "fac-110": [
+    audit("h-110-1", -3000, "Hệ thống", "Yêu cầu nâng hạng Tier 1 → 2 được tạo tự động", "organic"),
+    audit("h-110-2", -2950, "Trịnh Văn Đạt", "Đối tác nộp hồ sơ", "organic"),
+    audit("h-110-3", -2900, "Phạm Quốc Bảo", "Trì hoãn — Service Score chưa đạt", "organic", "Điểm dịch vụ 71/75",
+      { fromTier: 1, toTier: 2, complianceSnapshot: { systemPassed: 5, systemTotal: 7, manualChecked: 0, manualTotal: 0 } }),
+    audit("h-110-4", -2760, "Trịnh Văn Đạt", "Đã cải thiện Service Score lên 78", "organic"),
+    audit("h-110-5", -2700, "Lê Thị Hoa", "Phê duyệt — Nâng hạng Tier 1 → 2", "organic", undefined,
+      { fromTier: 1, toTier: 2, complianceSnapshot: { systemPassed: 7, systemTotal: 7, manualChecked: 0, manualTotal: 0 } }),
+  ],
+};
+
+// ─── Grace period events — keyed by facilityId ────────────────────────────────
+
+export const GRACE_PERIOD_EVENTS: Record<string, GracePeriodEvent[]> = {
+  // fac-103 (FLC Luxury Hotel Quy Nhơn) — giáng hạng từ Tier 3, đang ân hạn
+  "fac-103": [
+    {
+      id: "gp-103-1",
+      event_type: "tier_downgraded",
+      event_at: d(-500),
+      old_status: "active",
+      new_status: "active",
+      old_period_tier: 3,
+      new_period_tier: 2,
+      reason: "Data Score tụt xuống 76 — dưới ngưỡng Tier 3 (80) sau 30 ngày liên tiếp",
+    },
+    {
+      id: "gp-103-2",
+      event_type: "grace_started",
+      event_at: d(-500),
+      old_status: "active",
+      new_status: "grace_period",
+      old_period_tier: 3,
+      new_period_tier: 3,
+      reason: "Bắt đầu thời gian ân hạn 30 ngày — đối tác giữ nguyên quyền lợi Tier 3 trong thời gian này",
+    },
+    {
+      id: "gp-103-3",
+      event_type: "grace_ended",
+      event_at: d(-470),
+      old_status: "grace_period",
+      new_status: "active",
+      old_period_tier: 3,
+      new_period_tier: 2,
+      reason: "Hết 30 ngày ân hạn — hạng chính thức giảm xuống Tier 2. Đối tác đã nộp yêu cầu nâng hạng lại.",
+    },
+  ],
+  // fac-108 (BRG Golf Resort Đà Lạt) — trước đây cũng có grace period
+  "fac-108": [
+    {
+      id: "gp-108-1",
+      event_type: "grace_started",
+      event_at: d(-600),
+      old_status: "active",
+      new_status: "grace_period",
+      old_period_tier: 4,
+      new_period_tier: 4,
+      reason: "Service Score giảm xuống 82 — dưới ngưỡng Tier 4 (85). Bắt đầu 30 ngày ân hạn.",
+    },
+    {
+      id: "gp-108-2",
+      event_type: "grace_expired",
+      event_at: d(-570),
+      old_status: "grace_period",
+      new_status: "active",
+      old_period_tier: 4,
+      new_period_tier: 3,
+      reason: "Hết ân hạn — hạng chính thức về Tier 3. Đối tác đang nộp yêu cầu phục hồi.",
+    },
+  ],
+};
+
+// ─── Grant history — complimentary & sync grants ──────────────────────────────
+
+export const MOCK_GRANT_HISTORY: GrantHistoryEntry[] = [
+  {
+    id: "gr-001",
+    facilityId: "fac-103",
+    facilityName: "FLC Luxury Hotel Quy Nhơn",
+    grantedBy: "Lê Thị Hoa",
+    grantedAt: d(-480),
+    targetTier: 3,
+    expiryAt: d(30 * 24),
+    justification: "Cấp hạng tạm thời trong thời gian đối tác hoàn thiện hồ sơ pháp lý để nộp lại yêu cầu nâng hạng chính thức.",
+    kind: "complimentary",
+  },
+  {
+    id: "gr-002",
+    facilityId: "fac-109",
+    facilityName: "Khách sạn Ngọc Trai Sapa",
+    grantedBy: "Phạm Quốc Bảo",
+    grantedAt: d(-200),
+    targetTier: 1,
+    expiryAt: d(60 * 24),
+    justification: "Hỗ trợ đối tác khu vực miền núi trong chiến dịch mở rộng vùng sâu vùng xa Q1/2026.",
+    kind: "complimentary",
+  },
+];
+
+// ─── Partner account benefits events — keyed by partner name ─────────────────
+
+export const PARTNER_BENEFITS_EVENTS: Record<string, PartnerBenefitsEvent[]> = {
+  "FLC Group": [
+    {
+      id: "pb-flc-1",
+      event_type: "PartnerAccountReachedTier3",
+      event_at: d(-1000),
+      highest_active_facility_tier: 3,
+      has_any_tier3: true,
+      has_any_tier4: false,
+      trigger_facility: "FLC Luxury Hotel Quy Nhơn",
+    },
+    {
+      id: "pb-flc-2",
+      event_type: "PartnerAccountReachedTier4",
+      event_at: d(-700),
+      highest_active_facility_tier: 4,
+      has_any_tier3: true,
+      has_any_tier4: true,
+      trigger_facility: "BRG Golf Resort Đà Lạt",
+    },
+    {
+      id: "pb-flc-3",
+      event_type: "PartnerAccountDroppedBelowTier4",
+      event_at: d(-600),
+      highest_active_facility_tier: 3,
+      has_any_tier3: true,
+      has_any_tier4: false,
+      trigger_facility: "BRG Golf Resort Đà Lạt",
+      am_grace_expires_at: d(-570),
+    },
+  ],
+  "Vingroup": [
+    {
+      id: "pb-vin-1",
+      event_type: "PartnerAccountReachedTier3",
+      event_at: d(-2200),
+      highest_active_facility_tier: 3,
+      has_any_tier3: true,
+      has_any_tier4: false,
+      trigger_facility: "Vinpearl Resort & Spa Nha Trang",
+    },
+  ],
+};

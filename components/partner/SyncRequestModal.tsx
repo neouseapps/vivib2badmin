@@ -6,6 +6,7 @@ import {
   ChevronDown, AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui";
 import { TierBadge } from "@/components/tier-requests/TierBadge";
 import { PARTNER_FACILITIES, FACILITY_TIER_DATA } from "@/lib/mock/partnerTier";
 import type { FacilityRef, TierLevel } from "@/lib/tier-requests/types";
@@ -368,30 +369,32 @@ export function SyncRequestModal({
         {/* Footer */}
         {!isOnlyOneFacility && (
           <div className="px-6 py-4 border-t border-line flex items-center justify-between shrink-0">
-            <button
+            <Button
               onClick={() => step === 2 ? setStep(1) : onClose()}
-              className="btn-outline flex items-center gap-1"
+              variant="outline"
             >
               <ArrowLeft size={14} />
               {step === 2 ? "Bước trước" : "Hủy"}
-            </button>
+            </Button>
 
             {step === 1 ? (
-              <button
+              <Button
                 onClick={() => setStep(2)}
                 disabled={!step1Valid}
-                className={cn("btn-primary flex items-center gap-1", !step1Valid && "opacity-40 cursor-not-allowed")}
+                variant="primary"
+                className={cn(!step1Valid && "opacity-40 cursor-not-allowed")}
               >
                 Tiếp theo <ArrowRight size={14} />
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 onClick={handleSubmit}
                 disabled={!step2Valid || submitting}
-                className={cn("btn-primary flex items-center gap-1", (!step2Valid || submitting) && "opacity-40 cursor-not-allowed")}
+                variant="primary"
+                className={cn((!step2Valid || submitting) && "opacity-40 cursor-not-allowed")}
               >
                 {submitting ? "Đang gửi…" : <>Gửi yêu cầu <ArrowRight size={14} /></>}
-              </button>
+              </Button>
             )}
           </div>
         )}
